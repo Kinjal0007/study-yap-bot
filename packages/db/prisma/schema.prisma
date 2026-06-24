@@ -1,0 +1,66 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Guild {
+  id       String   @id
+  name     String
+  joinedAt DateTime @default(now())
+
+  sessions FocusSession[]
+}
+
+model User {
+  id       String  @id
+  username String
+  avatar   String?
+
+  ownedSessions  FocusSession[]     @relation("SessionOwner")
+  participations FocusParticipant[]
+}
+
+model FocusSession {
+  id           String        @id @default(cuid())
+  guildId      String
+  channelId    String
+  ownerId      String
+  durationMins Int
+  status       SessionStatus @default(LOBBY)
+  startedAt    DateTime?
+  endedAt      DateTime?
+  messageId    String        @default("")
+
+  guild        Guild              @relation(fields: [guildId], references: [id], onDelete: Cascade)
+  owner        User               @relation("SessionOwner", fields: [ownerId], references: [id])
+  participants FocusParticipant[]
+
+  @@index([guildId, status])
+  @@index([channelId, status])
+}
+
+enum SessionStatus {
+  LOBBY
+  ACTIVE
+  DONE
+  CANCELLED
+}
+
+model FocusParticipant {
+  id             String    @id @default(cuid())
+  sessionId      String
+  userId         String
+  joinedAt       DateTime  @default(now())
+  leftAt         DateTime?
+  minutesFocused Int       @default(0)
+
+  session FocusSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user    User         @relation(fields: [userId], references: [id])
+
+  @@unique([sessionId, userId])
+  @@index([userId])
+}
