@@ -31,7 +31,7 @@ export function buildSessionEmbed(session: SessionWithParticipants): {
   const fields: APIEmbedField[] = [
     { name: 'Duration',     value: formatDuration(session.durationMins), inline: true },
     { name: 'Status',       value: isLobby ? '⏳ Waiting to start' : '🔥 In progress', inline: true },
-    { name: `Participants (${session.participants.filter(p => !p.leftAt).length})`, value: participantList },
+    { name: `Participants (${session.participants.filter(p => p.leftAt === null).length})`, value: participantList },
   ];
 
   if (endsAt) {
