@@ -57,6 +57,7 @@ model FocusParticipant {
   joinedAt       DateTime  @default(now())
   leftAt         DateTime?
   minutesFocused Int       @default(0)
+  originalNickname String?
 
   session FocusSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   user    User         @relation(fields: [userId], references: [id])
