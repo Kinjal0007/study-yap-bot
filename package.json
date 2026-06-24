@@ -1,0 +1,11 @@
+{
+  "name": "yap-bot",
+  "private": true,
+  "scripts": {
+    "dev:bot": "pnpm --filter @yap/bot dev",
+    "build:bot": "pnpm --filter @yap/bot build",
+    "db:generate": "pnpm --filter @yap/db db:generate",
+    "db:migrate": "pnpm --filter @yap/db db:migrate",
+    "db:push": "pnpm --filter @yap/db db:push"
+  }
+}
