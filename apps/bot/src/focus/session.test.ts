@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { prisma } from '@yap/db';
+import { prisma, SessionStatus } from '@yap/db';
 import {
   createSession,
   getActiveSessionForChannel,
@@ -32,7 +32,7 @@ describe('createSession', () => {
       durationMins: 60,
     });
 
-    expect(session.status).toBe('LOBBY');
+    expect(session.status).toBe(SessionStatus.LOBBY);
     expect(session.durationMins).toBe(60);
     expect(session.startedAt).toBeNull();
   });
@@ -72,7 +72,7 @@ describe('getActiveSessionForChannel', () => {
     });
     await startSession(session.id);
     const result = await getActiveSessionForChannel(CHANNEL_ID);
-    expect(result?.status).toBe('ACTIVE');
+    expect(result?.status).toBe(SessionStatus.ACTIVE);
   });
 
   it('returns null for a DONE session', async () => {
@@ -84,6 +84,15 @@ describe('getActiveSessionForChannel', () => {
     const result = await getActiveSessionForChannel(CHANNEL_ID);
     expect(result).toBeNull();
   });
+
+  it('returns null for a CANCELLED session', async () => {
+    const session = await createSession({
+      guildId: GUILD_ID, channelId: CHANNEL_ID, ownerId: OWNER_ID, durationMins: 60,
+    });
+    await cancelSession(session.id);
+    const result = await getActiveSessionForChannel(CHANNEL_ID);
+    expect(result).toBeNull();
+  });
 });
 
 describe('startSession', () => {
@@ -92,7 +101,7 @@ describe('startSession', () => {
       guildId: GUILD_ID, channelId: CHANNEL_ID, ownerId: OWNER_ID, durationMins: 60,
     });
     const started = await startSession(session.id);
-    expect(started.status).toBe('ACTIVE');
+    expect(started.status).toBe(SessionStatus.ACTIVE);
     expect(started.startedAt).not.toBeNull();
   });
 });
@@ -104,17 +113,28 @@ describe('endSession', () => {
     });
     await startSession(session.id);
     const ended = await endSession(session.id);
-    expect(ended.status).toBe('DONE');
+    expect(ended.status).toBe(SessionStatus.DONE);
     expect(ended.endedAt).not.toBeNull();
   });
 });
 
 describe('cancelSession', () => {
-  it('sets status to CANCELLED', async () => {
+  it('sets status to CANCELLED and records endedAt', async () => {
     const session = await createSession({
       guildId: GUILD_ID, channelId: CHANNEL_ID, ownerId: OWNER_ID, durationMins: 60,
     });
     const cancelled = await cancelSession(session.id);
-    expect(cancelled.status).toBe('CANCELLED');
+    expect(cancelled.status).toBe(SessionStatus.CANCELLED);
+    expect(cancelled.endedAt).not.toBeNull();
+  });
+});
+
+describe('setSessionMessageId', () => {
+  it('updates the messageId on the session', async () => {
+    const session = await createSession({
+      guildId: GUILD_ID, channelId: CHANNEL_ID, ownerId: OWNER_ID, durationMins: 60,
+    });
+    const updated = await setSessionMessageId(session.id, 'msg-abc-123');
+    expect(updated.messageId).toBe('msg-abc-123');
   });
 });
