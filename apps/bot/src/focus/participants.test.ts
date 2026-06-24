@@ -57,8 +57,10 @@ describe('leaveSession', () => {
     });
 
     const p = await leaveSession(session.id, USER_ID);
-    expect(p.leftAt).not.toBeNull();
-    expect(p.minutesFocused).toBeGreaterThanOrEqual(10);
+    expect(p).not.toBeNull();
+    expect(p?.leftAt).not.toBeNull();
+    expect(p?.minutesFocused).toBeGreaterThanOrEqual(10);
+    expect(p?.minutesFocused).toBeLessThan(15);
   });
 
   it('sets minutesFocused to 0 if session has not started', async () => {
@@ -67,7 +69,8 @@ describe('leaveSession', () => {
     });
     await joinSession(session.id, USER_ID);
     const p = await leaveSession(session.id, USER_ID);
-    expect(p.minutesFocused).toBe(0);
+    expect(p).not.toBeNull();
+    expect(p?.minutesFocused).toBe(0);
   });
 });
 
@@ -90,7 +93,7 @@ describe('closeAllParticipants', () => {
     });
     participants.forEach(p => {
       expect(p.leftAt).not.toBeNull();
-      expect(p.minutesFocused).toBeGreaterThanOrEqual(0);
+      expect(p.minutesFocused).toBeGreaterThan(0);
     });
   });
 });
