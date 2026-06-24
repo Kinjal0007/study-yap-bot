@@ -1,4 +1,4 @@
-import { Events } from 'discord.js';
+import { Events, TextChannel } from 'discord.js';
 import { createClient } from './client.js';
 import { env } from './env.js';
 import { registerCommands } from './commands/index.js';
@@ -8,6 +8,7 @@ import { handleFocusCommand } from './commands/focus.js';
 import { handleLeaderboardCommand } from './commands/leaderboard.js';
 import { handleMystatsCommand } from './commands/mystats.js';
 import { reconcileActiveSessions } from './recovery.js';
+import { handleVoiceStateUpdate, WARNING_CHANNEL_ID } from './handlers/voiceState.js';
 
 const client = createClient();
 
@@ -19,6 +20,21 @@ client.once(Events.ClientReady, async (c) => {
 
 client.on(Events.GuildCreate, onGuildCreate);
 client.on(Events.GuildDelete, onGuildDelete);
+
+client.on(Events.VoiceStateUpdate, async (oldState, newState) => {
+  await handleVoiceStateUpdate(oldState, newState, async (userId, channelId) => {
+    try {
+      const ch = await client.channels.fetch(WARNING_CHANNEL_ID).catch(() => null);
+      if (ch instanceof TextChannel) {
+        await ch.send(
+          `Hey <@${userId}>, you've been in <#${channelId}> for 8 minutes — please turn on your camera! 📸`,
+        );
+      }
+    } catch (err) {
+      console.error('Failed to send cam warning:', err);
+    }
+  });
+});
 
 client.on(Events.InteractionCreate, async (interaction) => {
   if (interaction.isChatInputCommand()) {
