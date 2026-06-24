@@ -10,7 +10,11 @@ export function scheduleSessionEnd(
 
   const t = setTimeout(async () => {
     timers.delete(sessionId);
-    await onEnd();
+    try {
+      await onEnd();
+    } catch (err) {
+      console.error(`Timer callback failed for session ${sessionId}:`, err);
+    }
   }, delayMs);
 
   timers.set(sessionId, t);
