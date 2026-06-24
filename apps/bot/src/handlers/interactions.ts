@@ -20,6 +20,7 @@ export async function handleButtonInteraction(interaction: ButtonInteraction, cl
 
   if (action === 'create') {
     const durationMins = parseInt(sessionId, 10);
+    if (isNaN(durationMins) || durationMins <= 0) return;
     if (!interaction.guildId || !interaction.channelId) return;
 
     const existing = await getActiveSessionForChannel(interaction.channelId);
