@@ -1,7 +1,7 @@
 import type { ButtonInteraction, Client } from 'discord.js';
 import { GuildMember, TextChannel } from 'discord.js';
 import { prisma } from '@yap/db';
-import { startSession, endSession, cancelSession } from '../focus/session.js';
+import { startSession, endSession, cancelSession, getActiveSessionForChannel, setSessionMessageId, createSession } from '../focus/session.js';
 import { joinSession, leaveSession, closeAllParticipants } from '../focus/participants.js';
 import { buildSessionEmbed } from '../focus/embed.js';
 import { getBreakSuggestion } from '../focus/breaks.js';
@@ -17,6 +17,46 @@ export async function handleButtonInteraction(interaction: ButtonInteraction, cl
   const action = parts[1];
   const sessionId = parts.slice(2).join('_');
   if (!action || !sessionId) return;
+
+  if (action === 'create') {
+    const durationMins = parseInt(sessionId, 10);
+    if (!interaction.guildId || !interaction.channelId) return;
+
+    const existing = await getActiveSessionForChannel(interaction.channelId);
+    if (existing) {
+      await interaction.reply({ content: 'There is already an active session in this channel.', ephemeral: true });
+      return;
+    }
+
+    await prisma.guild.upsert({
+      where:  { id: interaction.guildId },
+      update: { name: interaction.guild?.name ?? 'Unknown' },
+      create: { id: interaction.guildId, name: interaction.guild?.name ?? 'Unknown' },
+    });
+
+    await prisma.user.upsert({
+      where:  { id: interaction.user.id },
+      update: { username: interaction.user.username, avatar: interaction.user.avatar },
+      create: { id: interaction.user.id, username: interaction.user.username, avatar: interaction.user.avatar },
+    });
+
+    const newSession = await createSession({
+      guildId:      interaction.guildId,
+      channelId:    interaction.channelId,
+      ownerId:      interaction.user.id,
+      durationMins,
+    });
+
+    const fullSession = await prisma.focusSession.findUniqueOrThrow({
+      where: { id: newSession.id },
+      include: { participants: { include: { user: true } }, owner: true },
+    });
+
+    const { embeds, components } = buildSessionEmbed(fullSession);
+    const msg = await interaction.reply({ embeds, components, fetchReply: true });
+    await setSessionMessageId(newSession.id, msg.id);
+    return;
+  }
 
   const session = await prisma.focusSession.findUnique({
     where: { id: sessionId },
