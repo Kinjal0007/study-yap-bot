@@ -1,0 +1,101 @@
+import type { ButtonInteraction, Client } from 'discord.js';
+import { TextChannel } from 'discord.js';
+import { prisma } from '@yap/db';
+import { startSession, endSession, cancelSession } from '../focus/session.js';
+import { joinSession, leaveSession, closeAllParticipants } from '../focus/participants.js';
+import { buildSessionEmbed } from '../focus/embed.js';
+import { getBreakSuggestion } from '../focus/breaks.js';
+import { scheduleSessionEnd, cancelSessionTimer } from '../focus/timer.js';
+
+export async function handleButtonInteraction(interaction: ButtonInteraction, client: Client): Promise<void> {
+  const { customId } = interaction;
+
+  if (!customId.startsWith('focus_')) return;
+
+  const parts = customId.split('_');
+  const action = parts[1];
+  const sessionId = parts.slice(2).join('_');
+  if (!action || !sessionId) return;
+
+  const session = await prisma.focusSession.findUnique({
+    where: { id: sessionId },
+    include: { participants: { include: { user: true } }, owner: true },
+  });
+
+  if (!session) {
+    await interaction.reply({ content: 'This session no longer exists.', ephemeral: true });
+    return;
+  }
+
+  if (session.status === 'DONE' || session.status === 'CANCELLED') {
+    await interaction.reply({ content: 'This session has already ended.', ephemeral: true });
+    return;
+  }
+
+  await prisma.user.upsert({
+    where:  { id: interaction.user.id },
+    update: { username: interaction.user.username, avatar: interaction.user.avatar },
+    create: { id: interaction.user.id, username: interaction.user.username, avatar: interaction.user.avatar },
+  });
+
+  if (action === 'join') {
+    if (session.status === 'ACTIVE') {
+      await interaction.reply({ content: 'The session has already started — you cannot join now.', ephemeral: true });
+      return;
+    }
+    await joinSession(sessionId, interaction.user.id);
+
+  } else if (action === 'leave') {
+    if (session.ownerId === interaction.user.id) {
+      cancelSessionTimer(sessionId);
+      await closeAllParticipants(sessionId);
+      await cancelSession(sessionId);
+      await interaction.update({ content: `Session ended — <@${interaction.user.id}> (the owner) left.`, embeds: [], components: [] });
+      return;
+    }
+    await leaveSession(sessionId, interaction.user.id);
+
+  } else if (action === 'start') {
+    if (session.ownerId !== interaction.user.id) {
+      await interaction.reply({ content: 'Only the session owner can start it.', ephemeral: true });
+      return;
+    }
+    if (session.status === 'ACTIVE') {
+      await interaction.reply({ content: 'Session is already running.', ephemeral: true });
+      return;
+    }
+    await startSession(sessionId);
+    scheduleSessionEnd(sessionId, session.durationMins * 60_000, async () => {
+      await closeAllParticipants(sessionId);
+      await endSession(sessionId);
+      const ch = await client.channels.fetch(session.channelId).catch(() => null);
+      if (ch instanceof TextChannel) {
+        await ch.send(getBreakSuggestion(session.durationMins));
+        const msg = await ch.messages.fetch(session.messageId).catch(() => null);
+        if (msg) await msg.edit({ content: '✅ Session complete!', embeds: [], components: [] });
+      }
+    });
+
+  } else if (action === 'end') {
+    if (session.ownerId !== interaction.user.id) {
+      await interaction.reply({ content: 'Only the session owner can end it.', ephemeral: true });
+      return;
+    }
+    cancelSessionTimer(sessionId);
+    await closeAllParticipants(sessionId);
+    await endSession(sessionId);
+    await interaction.update({ content: '✅ Session ended early.', embeds: [], components: [] });
+    return;
+
+  } else {
+    return;
+  }
+
+  // Refresh embed after join/leave/start
+  const updated = await prisma.focusSession.findUniqueOrThrow({
+    where: { id: sessionId },
+    include: { participants: { include: { user: true } }, owner: true },
+  });
+  const { embeds, components } = buildSessionEmbed(updated);
+  await interaction.update({ embeds, components });
+}
