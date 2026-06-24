@@ -2,7 +2,7 @@ import type { Client } from 'discord.js';
 import { TextChannel } from 'discord.js';
 import { prisma, SessionStatus } from '@yap/db';
 import { closeAllParticipants } from './focus/participants.js';
-import { endSession, cancelSession } from './focus/session.js';
+import { endSession } from './focus/session.js';
 import { scheduleSessionEnd } from './focus/timer.js';
 import { getBreakSuggestion } from './focus/breaks.js';
 
@@ -14,7 +14,10 @@ export async function reconcileActiveSessions(client: Client): Promise<void> {
   console.log(`Reconciling ${activeSessions.length} active session(s) on startup...`);
 
   for (const session of activeSessions) {
-    if (!session.startedAt) continue;
+    if (!session.startedAt) {
+      console.warn(`Session ${session.id} is ACTIVE but has no startedAt — skipping`);
+      continue;
+    }
 
     const endsAt    = new Date(session.startedAt.getTime() + session.durationMins * 60_000);
     const remaining = endsAt.getTime() - Date.now();
