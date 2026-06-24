@@ -35,6 +35,7 @@ export async function getActiveSessionForChannel(channelId: string) {
       channelId,
       status: { in: [SessionStatus.LOBBY, SessionStatus.ACTIVE] },
     },
+    orderBy: { id: 'asc' },
     include: { participants: { include: { user: true } }, owner: true },
   });
 }
