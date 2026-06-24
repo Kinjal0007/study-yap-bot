@@ -9,6 +9,7 @@ import { handleLeaderboardCommand } from './commands/leaderboard.js';
 import { handleMystatsCommand } from './commands/mystats.js';
 import { reconcileActiveSessions } from './recovery.js';
 import { handleVoiceStateUpdate, WARNING_CHANNEL_ID } from './handlers/voiceState.js';
+import { handlePrefixCommand } from './handlers/prefix.js';
 
 const client = createClient();
 
@@ -35,6 +36,8 @@ client.on(Events.VoiceStateUpdate, async (oldState, newState) => {
     }
   });
 });
+
+client.on(Events.MessageCreate, (message) => handlePrefixCommand(message));
 
 client.on(Events.InteractionCreate, async (interaction) => {
   if (interaction.isChatInputCommand()) {
