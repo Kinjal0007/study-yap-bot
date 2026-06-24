@@ -7,6 +7,7 @@ export function createClient(): Client {
       GatewayIntentBits.GuildMessages,
       GatewayIntentBits.GuildMessageReactions,
       GatewayIntentBits.GuildVoiceStates,
+      GatewayIntentBits.MessageContent,
     ],
     partials: [Partials.Message, Partials.Channel],
   });
