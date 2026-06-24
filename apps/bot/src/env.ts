@@ -12,6 +12,9 @@ const result = schema.safeParse(process.env);
 if (!result.success) {
   console.error('❌ Invalid environment variables:');
   console.error(result.error.flatten().fieldErrors);
+  if (process.env.NODE_ENV === 'test') {
+    throw new Error('Invalid environment variables in test environment');
+  }
   process.exit(1);
 }
 
