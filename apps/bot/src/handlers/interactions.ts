@@ -60,19 +60,23 @@ export async function handleButtonInteraction(interaction: ButtonInteraction, cl
       await interaction.reply({ content: 'Only the session owner can start it.', ephemeral: true });
       return;
     }
-    if (session.status === 'ACTIVE') {
+    if (session.status !== 'LOBBY') {
       await interaction.reply({ content: 'Session is already running.', ephemeral: true });
       return;
     }
     await startSession(sessionId);
     scheduleSessionEnd(sessionId, session.durationMins * 60_000, async () => {
-      await closeAllParticipants(sessionId);
-      await endSession(sessionId);
-      const ch = await client.channels.fetch(session.channelId).catch(() => null);
-      if (ch instanceof TextChannel) {
-        await ch.send(getBreakSuggestion(session.durationMins));
-        const msg = await ch.messages.fetch(session.messageId).catch(() => null);
-        if (msg) await msg.edit({ content: '✅ Session complete!', embeds: [], components: [] });
+      try {
+        await closeAllParticipants(sessionId);
+        await endSession(sessionId);
+        const ch = await client.channels.fetch(session.channelId).catch(() => null);
+        if (ch instanceof TextChannel) {
+          await ch.send(getBreakSuggestion(session.durationMins));
+          const msg = await ch.messages.fetch(session.messageId).catch(() => null);
+          if (msg) await msg.edit({ content: '✅ Session complete!', embeds: [], components: [] });
+        }
+      } catch (err) {
+        console.error(`Timer callback failed for session ${sessionId}:`, err);
       }
     });
 
