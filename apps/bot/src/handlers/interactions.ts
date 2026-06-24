@@ -1,11 +1,12 @@
 import type { ButtonInteraction, Client } from 'discord.js';
-import { TextChannel } from 'discord.js';
+import { GuildMember, TextChannel } from 'discord.js';
 import { prisma } from '@yap/db';
 import { startSession, endSession, cancelSession } from '../focus/session.js';
 import { joinSession, leaveSession, closeAllParticipants } from '../focus/participants.js';
 import { buildSessionEmbed } from '../focus/embed.js';
 import { getBreakSuggestion } from '../focus/breaks.js';
 import { scheduleSessionEnd, cancelSessionTimer } from '../focus/timer.js';
+import { applyAFKNickname, restoreNickname } from '../focus/nickname.js';
 
 export async function handleButtonInteraction(interaction: ButtonInteraction, client: Client): Promise<void> {
   const { customId } = interaction;
@@ -48,12 +49,22 @@ export async function handleButtonInteraction(interaction: ButtonInteraction, cl
   } else if (action === 'leave') {
     if (session.ownerId === interaction.user.id) {
       cancelSessionTimer(sessionId);
+      if (interaction.guild) {
+        for (const p of session.participants) {
+          const member = await interaction.guild.members.fetch(p.userId).catch(() => null);
+          if (member) await restoreNickname(member, p.originalNickname ?? null);
+        }
+      }
       await closeAllParticipants(sessionId);
       await cancelSession(sessionId);
       await interaction.update({ content: `Session ended — <@${interaction.user.id}> (the owner) left.`, embeds: [], components: [] });
       return;
     }
     await leaveSession(sessionId, interaction.user.id);
+    if (interaction.member instanceof GuildMember) {
+      const participant = session.participants.find(p => p.userId === interaction.user.id);
+      await restoreNickname(interaction.member, participant?.originalNickname ?? null);
+    }
 
   } else if (action === 'start') {
     if (session.ownerId !== interaction.user.id) {
@@ -65,10 +76,26 @@ export async function handleButtonInteraction(interaction: ButtonInteraction, cl
       return;
     }
     await startSession(sessionId);
+    if (interaction.guild) {
+      for (const p of session.participants) {
+        const member = await interaction.guild.members.fetch(p.userId).catch(() => null);
+        if (member) await applyAFKNickname(member, sessionId);
+      }
+    }
     scheduleSessionEnd(sessionId, session.durationMins * 60_000, async () => {
       try {
         await closeAllParticipants(sessionId);
         await endSession(sessionId);
+        const ended = await prisma.focusSession.findUnique({
+          where: { id: sessionId },
+          include: { participants: true },
+        });
+        if (ended && interaction.guild) {
+          for (const p of ended.participants) {
+            const member = await interaction.guild.members.fetch(p.userId).catch(() => null);
+            if (member) await restoreNickname(member, p.originalNickname ?? null);
+          }
+        }
         const ch = await client.channels.fetch(session.channelId).catch(() => null);
         if (ch instanceof TextChannel) {
           await ch.send(getBreakSuggestion(session.durationMins));
@@ -86,6 +113,12 @@ export async function handleButtonInteraction(interaction: ButtonInteraction, cl
       return;
     }
     cancelSessionTimer(sessionId);
+    if (interaction.guild) {
+      for (const p of session.participants) {
+        const member = await interaction.guild.members.fetch(p.userId).catch(() => null);
+        if (member) await restoreNickname(member, p.originalNickname ?? null);
+      }
+    }
     await closeAllParticipants(sessionId);
     await endSession(sessionId);
     await interaction.update({ content: '✅ Session ended early.', embeds: [], components: [] });
@@ -95,7 +128,6 @@ export async function handleButtonInteraction(interaction: ButtonInteraction, cl
     return;
   }
 
-  // Refresh embed after join/leave/start
   const updated = await prisma.focusSession.findUniqueOrThrow({
     where: { id: sessionId },
     include: { participants: { include: { user: true } }, owner: true },
