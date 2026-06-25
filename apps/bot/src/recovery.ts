@@ -1,6 +1,6 @@
 import type { Client } from 'discord.js';
 import { TextChannel } from 'discord.js';
-import { prisma, SessionStatus } from '@yap/db';
+import { prisma } from '@yap/db';
 import { closeAllParticipants } from './focus/participants.js';
 import { endSession } from './focus/session.js';
 import { scheduleSessionEnd } from './focus/timer.js';
@@ -8,7 +8,7 @@ import { getBreakSuggestion } from './focus/breaks.js';
 
 export async function reconcileActiveSessions(client: Client): Promise<void> {
   const activeSessions = await prisma.focusSession.findMany({
-    where: { status: SessionStatus.ACTIVE },
+    where: { status: 'ACTIVE' as const },
   });
 
   console.log(`Reconciling ${activeSessions.length} active session(s) on startup...`);
