@@ -1,17 +1,27 @@
+
+
+
 {
   "name": "@yap/db",
   "version": "0.0.1",
   "private": true,
-  "main": "./src/index.ts",
+  "type": "module",
+  "main": "./dist/index.js",
+  "exports": {
+    ".": "./dist/index.js"
+  },
   "scripts": {
+    "build": "tsc",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push"
   },
   "dependencies": {
-    "@prisma/client": "^5.22.0"
+    "@prisma/client": "^5.22.0",
+    "prisma": "^5.22.0"
   },
   "devDependencies": {
-    "prisma": "^5.22.0"
+    "@types/node": "^20.0.0",
+    "typescript": "^5.5.0"
   }
 }

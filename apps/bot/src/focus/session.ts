@@ -1,4 +1,4 @@
-import { prisma, SessionStatus } from '@yap/db';
+import { prisma } from '@yap/db';
 
 interface CreateSessionInput {
   guildId: string;
@@ -33,7 +33,7 @@ export async function getActiveSessionForChannel(channelId: string) {
   return prisma.focusSession.findFirst({
     where: {
       channelId,
-      status: { in: [SessionStatus.LOBBY, SessionStatus.ACTIVE] },
+      status: { in: ['LOBBY' as const, 'ACTIVE' as const] },
     },
     orderBy: { id: 'asc' },
     include: { participants: { include: { user: true } }, owner: true },
@@ -43,20 +43,20 @@ export async function getActiveSessionForChannel(channelId: string) {
 export async function startSession(sessionId: string) {
   return prisma.focusSession.update({
     where: { id: sessionId },
-    data:  { status: SessionStatus.ACTIVE, startedAt: new Date() },
+    data:  { status: 'ACTIVE' as const, startedAt: new Date() },
   });
 }
 
 export async function endSession(sessionId: string) {
   return prisma.focusSession.update({
     where: { id: sessionId },
-    data:  { status: SessionStatus.DONE, endedAt: new Date() },
+    data:  { status: 'DONE' as const, endedAt: new Date() },
   });
 }
 
 export async function cancelSession(sessionId: string) {
   return prisma.focusSession.update({
     where: { id: sessionId },
-    data:  { status: SessionStatus.CANCELLED, endedAt: new Date() },
+    data:  { status: 'CANCELLED' as const, endedAt: new Date() },
   });
 }

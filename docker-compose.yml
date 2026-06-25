@@ -6,10 +6,17 @@ services:
       POSTGRES_USER: yap
       POSTGRES_PASSWORD: yap
       POSTGRES_DB: yap
-    ports:
-      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+
+  bot:
+    image: ghcr.io/kinjal0007/study-yap-bot:latest
+    restart: unless-stopped
+    depends_on:
+      - postgres
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://yap:yap@postgres:5432/yap
 
 volumes:
   postgres_data:
