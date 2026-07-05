@@ -50,6 +50,8 @@ async function cleanupStalePickerMessages(client: Client): Promise<void> {
       if (!messages) continue;
       for (const msg of messages.values()) {
         if (!msg.author.bot) continue;
+        const isRecent = Date.now() - msg.createdTimestamp < 5 * 60 * 1000;
+        if (isRecent) continue;
         const hasPickerButton = msg.components.some(row =>
           'components' in row && (row as { components: { customId?: string }[] }).components.some(
             c => c.customId?.startsWith('focus_create_')

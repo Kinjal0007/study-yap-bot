@@ -1,7 +1,7 @@
 import type { ButtonInteraction, Client } from 'discord.js';
 import { GuildMember, TextChannel } from 'discord.js';
 import { prisma } from '@yap/db';
-import { startSession, endSession, cancelSession, getActiveSessionForChannel, setSessionMessageId, createSession } from '../focus/session.js';
+import { startSession, endSession, cancelSession, setSessionMessageId, createSession } from '../focus/session.js';
 import { joinSession, leaveSession, closeAllParticipants } from '../focus/participants.js';
 import { buildSessionEmbed } from '../focus/embed.js';
 import { getBreakSuggestion } from '../focus/breaks.js';
@@ -20,7 +20,7 @@ export async function handleButtonInteraction(interaction: ButtonInteraction, cl
 
   if (action === 'create') {
     const pickerAge = Date.now() - interaction.message.createdTimestamp;
-    if (pickerAge > 3 * 60 * 1000) {
+    if (pickerAge > 2 * 60 * 1000) {
       await interaction.update({
         embeds: [{ title: '📚 New Focus Session', description: 'No duration selected — this picker has expired.', color: 0x808080 }],
         components: [],
@@ -31,12 +31,6 @@ export async function handleButtonInteraction(interaction: ButtonInteraction, cl
     const durationMins = parseInt(sessionId, 10);
     if (isNaN(durationMins) || durationMins <= 0) return;
     if (!interaction.guildId || !interaction.channelId) return;
-
-    const existing = await getActiveSessionForChannel(interaction.channelId);
-    if (existing) {
-      await interaction.editReply({ content: 'There is already an active session in this channel.' });
-      return;
-    }
 
     await prisma.guild.upsert({
       where:  { id: interaction.guildId },
