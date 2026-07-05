@@ -19,13 +19,22 @@ export async function handleButtonInteraction(interaction: ButtonInteraction, cl
   if (!action || !sessionId) return;
 
   if (action === 'create') {
+    const pickerAge = Date.now() - interaction.message.createdTimestamp;
+    if (pickerAge > 3 * 60 * 1000) {
+      await interaction.update({
+        embeds: [{ title: '📚 New Focus Session', description: 'No duration selected — this picker has expired.', color: 0x808080 }],
+        components: [],
+      });
+      return;
+    }
+    await interaction.deferReply();
     const durationMins = parseInt(sessionId, 10);
     if (isNaN(durationMins) || durationMins <= 0) return;
     if (!interaction.guildId || !interaction.channelId) return;
 
     const existing = await getActiveSessionForChannel(interaction.channelId);
     if (existing) {
-      await interaction.reply({ content: 'There is already an active session in this channel.', ephemeral: true });
+      await interaction.editReply({ content: 'There is already an active session in this channel.' });
       return;
     }
 
@@ -54,10 +63,12 @@ export async function handleButtonInteraction(interaction: ButtonInteraction, cl
     });
 
     const { embeds, components } = buildSessionEmbed(fullSession);
-    const msg = await interaction.reply({ embeds, components, fetchReply: true });
+    const msg = await interaction.editReply({ embeds, components });
     await setSessionMessageId(newSession.id, msg.id);
     return;
   }
+
+  await interaction.deferUpdate();
 
   const session = await prisma.focusSession.findUnique({
     where: { id: sessionId },
@@ -65,12 +76,12 @@ export async function handleButtonInteraction(interaction: ButtonInteraction, cl
   });
 
   if (!session) {
-    await interaction.reply({ content: 'This session no longer exists.', ephemeral: true });
+    await interaction.followUp({ content: 'This session no longer exists.', ephemeral: true });
     return;
   }
 
   if (session.status === 'DONE' || session.status === 'CANCELLED') {
-    await interaction.reply({ content: 'This session has already ended.', ephemeral: true });
+    await interaction.followUp({ content: 'This session has already ended.', ephemeral: true });
     return;
   }
 
@@ -98,7 +109,7 @@ export async function handleButtonInteraction(interaction: ButtonInteraction, cl
       }
       await closeAllParticipants(sessionId);
       await cancelSession(sessionId);
-      await interaction.update({ content: `Session ended — <@${interaction.user.id}> (the owner) left.`, embeds: [], components: [] });
+      await interaction.editReply({ content: `Session ended — <@${interaction.user.id}> (the owner) left.`, embeds: [], components: [] });
       return;
     }
     await leaveSession(sessionId, interaction.user.id);
@@ -109,11 +120,11 @@ export async function handleButtonInteraction(interaction: ButtonInteraction, cl
 
   } else if (action === 'start') {
     if (session.ownerId !== interaction.user.id) {
-      await interaction.reply({ content: 'Only the session owner can start it.', ephemeral: true });
+      await interaction.followUp({ content: 'Only the session owner can start it.', ephemeral: true });
       return;
     }
     if (session.status !== 'LOBBY') {
-      await interaction.reply({ content: 'Session is already running.', ephemeral: true });
+      await interaction.followUp({ content: 'Session is already running.', ephemeral: true });
       return;
     }
     await startSession(sessionId);
@@ -126,7 +137,7 @@ export async function handleButtonInteraction(interaction: ButtonInteraction, cl
     scheduleSessionEnd(sessionId, session.durationMins * 60_000, async () => {
       try {
         await closeAllParticipants(sessionId);
-        await endSession(sessionId);
+        await endSession(sessionId, true);
         const ended = await prisma.focusSession.findUnique({
           where: { id: sessionId },
           include: { participants: true },
@@ -150,7 +161,7 @@ export async function handleButtonInteraction(interaction: ButtonInteraction, cl
 
   } else if (action === 'end') {
     if (session.ownerId !== interaction.user.id) {
-      await interaction.reply({ content: 'Only the session owner can end it.', ephemeral: true });
+      await interaction.followUp({ content: 'Only the session owner can end it.', ephemeral: true });
       return;
     }
     cancelSessionTimer(sessionId);
@@ -162,7 +173,7 @@ export async function handleButtonInteraction(interaction: ButtonInteraction, cl
     }
     await closeAllParticipants(sessionId);
     await endSession(sessionId);
-    await interaction.update({ content: '✅ Session ended early.', embeds: [], components: [] });
+    await interaction.editReply({ content: '✅ Session ended early.', embeds: [], components: [] });
     return;
 
   } else {
@@ -174,5 +185,5 @@ export async function handleButtonInteraction(interaction: ButtonInteraction, cl
     include: { participants: { include: { user: true } }, owner: true },
   });
   const { embeds, components } = buildSessionEmbed(updated);
-  await interaction.update({ embeds, components });
+  await interaction.editReply({ embeds, components });
 }

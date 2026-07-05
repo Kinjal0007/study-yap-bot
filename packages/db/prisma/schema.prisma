@@ -22,6 +22,21 @@ model User {
 
   ownedSessions  FocusSession[]     @relation("SessionOwner")
   participations FocusParticipant[]
+  vcSessions     VcSession[]
+}
+
+model VcSession {
+  id           String    @id @default(cuid())
+  userId       String
+  channelId    String
+  joinedAt     DateTime  @default(now())
+  leftAt       DateTime?
+  durationSecs Int?
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([joinedAt])
 }
 
 model FocusSession {
@@ -31,9 +46,10 @@ model FocusSession {
   ownerId      String
   durationMins Int
   status       SessionStatus @default(LOBBY)
-  startedAt    DateTime?
-  endedAt      DateTime?
-  messageId    String        @default("")
+  startedAt         DateTime?
+  endedAt           DateTime?
+  messageId         String        @default("")
+  completedNaturally Boolean      @default(false)
 
   guild        Guild              @relation(fields: [guildId], references: [id], onDelete: Cascade)
   owner        User               @relation("SessionOwner", fields: [ownerId], references: [id])
