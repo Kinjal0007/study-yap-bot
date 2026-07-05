@@ -1,144 +1,67 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { prisma } from '@yap/db';
-import { getLeaderboard, getMyStats, TimeRange } from './stats.js';
+import { getLeaderboard, getMyStats } from './stats.js';
 
-const GUILD_ID = 'test-guild-s';
-const USER_A = 'user-a';
-const USER_B = 'user-b';
+const USER_A = 'user-stats-a';
+const USER_B = 'user-stats-b';
+const CHANNEL = '1506364304486830163';
+
+function daysAgo(n: number): Date {
+  return new Date(Date.now() - n * 24 * 60 * 60 * 1000);
+}
 
 beforeEach(async () => {
-  await prisma.focusParticipant.deleteMany({ where: { session: { guildId: GUILD_ID } } });
-  await prisma.focusSession.deleteMany({ where: { guildId: GUILD_ID } });
-  await prisma.user.deleteMany({ where: { id: { startsWith: 'extra-user-s-' } } });
+  await prisma.vcSession.deleteMany({ where: { userId: { in: [USER_A, USER_B] } } });
   await prisma.user.deleteMany({ where: { id: { in: [USER_A, USER_B] } } });
-  await prisma.guild.deleteMany({ where: { id: GUILD_ID } });
+  await prisma.user.createMany({ data: [{ id: USER_A, username: 'alice' }, { id: USER_B, username: 'bob' }] });
 
-  await prisma.guild.create({ data: { id: GUILD_ID, name: 'Test Guild' } });
-  await prisma.user.create({ data: { id: USER_A, username: 'alice' } });
-  await prisma.user.create({ data: { id: USER_B, username: 'bob' } });
-
-  // Seed: alice has 120 total minutes across 2 sessions, bob has 45
-  const s1 = await prisma.focusSession.create({
-    data: {
-      guildId: GUILD_ID, channelId: 'ch1', ownerId: USER_A,
-      durationMins: 60, status: 'DONE',
-      startedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-      endedAt:   new Date(Date.now() - 2 * 24 * 60 * 60 * 1000 + 60 * 60 * 1000),
-      messageId: 'msg1',
-    },
-  });
-  const s2 = await prisma.focusSession.create({
-    data: {
-      guildId: GUILD_ID, channelId: 'ch1', ownerId: USER_A,
-      durationMins: 60, status: 'DONE',
-      startedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
-      endedAt:   new Date(Date.now() - 1 * 24 * 60 * 60 * 1000 + 60 * 60 * 1000),
-      messageId: 'msg2',
-    },
-  });
-  const s3 = await prisma.focusSession.create({
-    data: {
-      guildId: GUILD_ID, channelId: 'ch1', ownerId: USER_B,
-      durationMins: 45, status: 'DONE',
-      startedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
-      endedAt:   new Date(Date.now() - 3 * 24 * 60 * 60 * 1000 + 45 * 60 * 1000),
-      messageId: 'msg3',
-    },
-  });
-
-  await prisma.focusParticipant.createMany({
+  // Alice: 2h total (2 sessions of 1h each, 1 and 2 days ago)
+  // Bob: 45min total (1 session, 3 days ago)
+  await prisma.vcSession.createMany({
     data: [
-      { sessionId: s1.id, userId: USER_A, minutesFocused: 60, leftAt: s1.endedAt },
-      { sessionId: s2.id, userId: USER_A, minutesFocused: 60, leftAt: s2.endedAt },
-      { sessionId: s3.id, userId: USER_B, minutesFocused: 45, leftAt: s3.endedAt },
+      { userId: USER_A, channelId: CHANNEL, joinedAt: daysAgo(2), leftAt: daysAgo(2), durationSecs: 3600 },
+      { userId: USER_A, channelId: CHANNEL, joinedAt: daysAgo(1), leftAt: daysAgo(1), durationSecs: 3600 },
+      { userId: USER_B, channelId: CHANNEL, joinedAt: daysAgo(3), leftAt: daysAgo(3), durationSecs: 2700 },
     ],
   });
 });
 
 describe('getLeaderboard', () => {
-  it('ranks users by total minutesFocused descending', async () => {
-    const lb = await getLeaderboard(GUILD_ID, 'all-time');
-    expect(lb[0].userId).toBe(USER_A);
-    expect(lb[0].totalMinutes).toBe(120);
-    expect(lb[1].userId).toBe(USER_B);
-    expect(lb[1].totalMinutes).toBe(45);
+  it('ranks users by total secs descending', async () => {
+    const lb = await getLeaderboard('all-time');
+    const a = lb.find(r => r.userId === USER_A);
+    const b = lb.find(r => r.userId === USER_B);
+    expect(a?.totalSecs).toBe(7200);
+    expect(b?.totalSecs).toBe(2700);
+    expect(lb.indexOf(a!)).toBeLessThan(lb.indexOf(b!));
   });
 
-  it('limits results to top 10', async () => {
-    // Seed 9 extra users (on top of USER_A and USER_B = 11 total) each with 1 minute
-    const extraUserIds = Array.from({ length: 9 }, (_, i) => `extra-user-s-${i}`);
-    await prisma.user.createMany({
-      data: extraUserIds.map(id => ({ id, username: id })),
-    });
-    const extraSessions = await Promise.all(
-      extraUserIds.map(userId =>
-        prisma.focusSession.create({
-          data: {
-            guildId: GUILD_ID, channelId: 'ch-extra', ownerId: userId,
-            durationMins: 30, status: 'DONE',
-            startedAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000),
-            endedAt:   new Date(Date.now() - 4 * 24 * 60 * 60 * 1000 + 30 * 60 * 1000),
-            messageId: 'msg-extra',
-          },
-        }),
-      ),
-    );
-    await prisma.focusParticipant.createMany({
-      data: extraSessions.map((s, i) => ({
-        sessionId: s.id,
-        userId: extraUserIds[i],
-        minutesFocused: 1,
-        leftAt: s.endedAt,
-      })),
-    });
-
-    const lb = await getLeaderboard(GUILD_ID, 'all-time');
-    expect(lb.length).toBe(10);
-  });
-
-  it('filters by this-week correctly', async () => {
-    // USER_B session was 3 days ago, still within a week
-    const lb = await getLeaderboard(GUILD_ID, 'this-week');
-    const userB = lb.find(r => r.userId === USER_B);
-    expect(userB?.totalMinutes).toBe(45);
+  it('filters by this-week', async () => {
+    const lb = await getLeaderboard('this-week');
+    const b = lb.find(r => r.userId === USER_B);
+    expect(b?.totalSecs).toBe(2700);
   });
 
   it('excludes sessions older than 7 days from this-week', async () => {
-    // USER_A sessions are 1 and 2 days old (within week), USER_B is 3 days old (within week)
-    // Add a session 8 days ago — should be excluded
-    const oldSession = await prisma.focusSession.create({
-      data: {
-        guildId: GUILD_ID, channelId: 'ch1', ownerId: USER_A,
-        durationMins: 60, status: 'DONE',
-        startedAt: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000),
-        endedAt:   new Date(Date.now() - 8 * 24 * 60 * 60 * 1000 + 60 * 60 * 1000),
-        messageId: 'msg-old',
-      },
+    await prisma.vcSession.create({
+      data: { userId: USER_A, channelId: CHANNEL, joinedAt: daysAgo(8), leftAt: daysAgo(8), durationSecs: 3600 },
     });
-    await prisma.focusParticipant.create({
-      data: {
-        sessionId: oldSession.id, userId: USER_A,
-        minutesFocused: 60, leftAt: oldSession.endedAt,
-      },
-    });
-
-    const lb = await getLeaderboard(GUILD_ID, 'this-week');
-    const userA = lb.find(r => r.userId === USER_A);
-    // USER_A has 120 min within the week; the 60-min old session should NOT be included
-    expect(userA?.totalMinutes).toBe(120);
+    const lb = await getLeaderboard('this-week');
+    const a = lb.find(r => r.userId === USER_A);
+    expect(a?.totalSecs).toBe(7200); // old session excluded
   });
 });
 
 describe('getMyStats', () => {
-  it('returns correct total minutes and session count for a user', async () => {
-    const stats = await getMyStats(GUILD_ID, USER_A);
-    expect(stats.totalMinutes).toBe(120);
-    expect(stats.sessionCount).toBe(2);
+  it('returns correct totals for a user', async () => {
+    const stats = await getMyStats(USER_A);
+    expect(stats.allTimeSecs).toBe(7200);
   });
 
   it('returns zeros for a user with no sessions', async () => {
-    const stats = await getMyStats(GUILD_ID, 'no-such-user');
-    expect(stats.totalMinutes).toBe(0);
-    expect(stats.sessionCount).toBe(0);
+    const stats = await getMyStats('no-such-user');
+    expect(stats.allTimeSecs).toBe(0);
+    expect(stats.weeklySecs).toBe(0);
+    expect(stats.monthlySecs).toBe(0);
   });
 });

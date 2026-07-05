@@ -47,10 +47,10 @@ export async function startSession(sessionId: string) {
   });
 }
 
-export async function endSession(sessionId: string) {
+export async function endSession(sessionId: string, completedNaturally = false) {
   return prisma.focusSession.update({
     where: { id: sessionId },
-    data:  { status: 'DONE' as const, endedAt: new Date() },
+    data:  { status: 'DONE' as const, endedAt: new Date(), completedNaturally },
   });
 }
 

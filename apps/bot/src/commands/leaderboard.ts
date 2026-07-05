@@ -1,9 +1,9 @@
 import { ChatInputCommandInteraction, EmbedBuilder, SlashCommandBuilder } from 'discord.js';
-import { getLeaderboard, type TimeRange } from '../focus/stats.js';
+import { getLeaderboard, getTier, type TimeRange } from '../focus/stats.js';
 
 export const leaderboardCommand = new SlashCommandBuilder()
   .setName('leaderboard')
-  .setDescription('See the focus time leaderboard')
+  .setDescription('See the study time leaderboard')
   .addStringOption(opt =>
     opt
       .setName('range')
@@ -17,13 +17,9 @@ export const leaderboardCommand = new SlashCommandBuilder()
   );
 
 export async function handleLeaderboardCommand(interaction: ChatInputCommandInteraction): Promise<void> {
-  if (!interaction.guildId) {
-    await interaction.reply({ content: 'This command only works in a server.', ephemeral: true });
-    return;
-  }
-
-  const range = (interaction.options.getString('range') ?? 'all-time') as TimeRange;
-  const rows  = await getLeaderboard(interaction.guildId, range);
+  const range = (interaction.options.getString('range') ?? 'this-month') as TimeRange;
+  await interaction.deferReply();
+  const rows = await getLeaderboard(range);
 
   const rangeLabel: Record<TimeRange, string> = {
     'all-time':   'All Time',
@@ -32,19 +28,27 @@ export async function handleLeaderboardCommand(interaction: ChatInputCommandInte
   };
 
   const description = rows.length === 0
-    ? 'No focus sessions recorded yet. Start one with `/focus`!'
+    ? 'No study time recorded yet.'
     : rows.map((r, i) => {
-        const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}.`;
-        const time  = r.totalMinutes >= 60
-          ? `${Math.floor(r.totalMinutes / 60)}h ${r.totalMinutes % 60}m`
-          : `${r.totalMinutes}m`;
-        return `${medal} <@${r.userId}> — **${time}** (${r.sessionCount} sessions)`;
+        const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `**${i + 1}.**`;
+        const hours = r.totalSecs / 3600;
+        const tier  = getTier(hours);
+        const timeStr = formatTime(r.totalSecs);
+        return `${medal} <@${r.userId}> — **${timeStr}** ${tier.emoji}`;
       }).join('\n');
 
   const embed = new EmbedBuilder()
-    .setTitle(`📊 Focus Leaderboard — ${rangeLabel[range]}`)
+    .setTitle(`📊 Study Leaderboard — ${rangeLabel[range]}`)
     .setDescription(description)
     .setColor(0xa8ff3e);
 
-  await interaction.reply({ embeds: [embed] });
+  await interaction.editReply({ embeds: [embed] });
+}
+
+export function formatTime(secs: number): string {
+  const h = Math.floor(secs / 3600);
+  const m = Math.floor((secs % 3600) / 60);
+  if (h === 0) return `${m}m`;
+  if (m === 0) return `${h}h`;
+  return `${h}h ${m}m`;
 }

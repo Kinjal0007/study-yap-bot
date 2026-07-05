@@ -38,7 +38,7 @@ describe('handleVoiceStateUpdate', () => {
     const old = makeState({ userId: USER, channelId: null,        selfVideo: false, streaming: false });
     const next = makeState({ userId: USER, channelId: CAM_CHANNEL, selfVideo: false, streaming: false });
 
-    await handleVoiceStateUpdate(old, next, warn);
+    await handleVoiceStateUpdate(old, next, warn, vi.fn());
     expect(hasPendingCamWarning(USER)).toBe(true);
   });
 
@@ -47,7 +47,7 @@ describe('handleVoiceStateUpdate', () => {
     const old = makeState({ userId: USER, channelId: null,        selfVideo: false, streaming: false });
     const next = makeState({ userId: USER, channelId: CAM_CHANNEL, selfVideo: false, streaming: true });
 
-    await handleVoiceStateUpdate(old, next, warn);
+    await handleVoiceStateUpdate(old, next, warn, vi.fn());
     expect(hasPendingCamWarning(USER)).toBe(false);
   });
 
@@ -56,7 +56,7 @@ describe('handleVoiceStateUpdate', () => {
     const old = makeState({ userId: USER, channelId: null,        selfVideo: false, streaming: false });
     const next = makeState({ userId: USER, channelId: CAM_CHANNEL, selfVideo: true,  streaming: false });
 
-    await handleVoiceStateUpdate(old, next, warn);
+    await handleVoiceStateUpdate(old, next, warn, vi.fn());
     expect(hasPendingCamWarning(USER)).toBe(false);
   });
 
@@ -65,10 +65,10 @@ describe('handleVoiceStateUpdate', () => {
     const join  = makeState({ userId: USER, channelId: CAM_CHANNEL, selfVideo: false, streaming: false });
     const camOn = makeState({ userId: USER, channelId: CAM_CHANNEL, selfVideo: true,  streaming: false });
 
-    await handleVoiceStateUpdate(makeState({ userId: USER, channelId: null, selfVideo: false, streaming: false }), join, warn);
+    await handleVoiceStateUpdate(makeState({ userId: USER, channelId: null, selfVideo: false, streaming: false }), join, warn, vi.fn());
     expect(hasPendingCamWarning(USER)).toBe(true);
 
-    await handleVoiceStateUpdate(join, camOn, warn);
+    await handleVoiceStateUpdate(join, camOn, warn, vi.fn());
     expect(hasPendingCamWarning(USER)).toBe(false);
   });
 
@@ -77,8 +77,8 @@ describe('handleVoiceStateUpdate', () => {
     const join      = makeState({ userId: USER, channelId: CAM_CHANNEL, selfVideo: false, streaming: false });
     const streaming = makeState({ userId: USER, channelId: CAM_CHANNEL, selfVideo: false, streaming: true });
 
-    await handleVoiceStateUpdate(makeState({ userId: USER, channelId: null, selfVideo: false, streaming: false }), join, warn);
-    await handleVoiceStateUpdate(join, streaming, warn);
+    await handleVoiceStateUpdate(makeState({ userId: USER, channelId: null, selfVideo: false, streaming: false }), join, warn, vi.fn());
+    await handleVoiceStateUpdate(join, streaming, warn, vi.fn());
     expect(hasPendingCamWarning(USER)).toBe(false);
   });
 
@@ -87,8 +87,8 @@ describe('handleVoiceStateUpdate', () => {
     const join  = makeState({ userId: USER, channelId: CAM_CHANNEL, selfVideo: false, streaming: false });
     const leave = makeState({ userId: USER, channelId: null,         selfVideo: false, streaming: false });
 
-    await handleVoiceStateUpdate(makeState({ userId: USER, channelId: null, selfVideo: false, streaming: false }), join, warn);
-    await handleVoiceStateUpdate(join, leave, warn);
+    await handleVoiceStateUpdate(makeState({ userId: USER, channelId: null, selfVideo: false, streaming: false }), join, warn, vi.fn());
+    await handleVoiceStateUpdate(join, leave, warn, vi.fn());
     expect(hasPendingCamWarning(USER)).toBe(false);
   });
 
@@ -97,7 +97,7 @@ describe('handleVoiceStateUpdate', () => {
     const old  = makeState({ userId: USER, channelId: null,        selfVideo: false, streaming: false });
     const next = makeState({ userId: USER, channelId: CAM_CHANNEL, selfVideo: false, streaming: false });
 
-    await handleVoiceStateUpdate(old, next, warn);
+    await handleVoiceStateUpdate(old, next, warn, vi.fn());
     expect(warn).not.toHaveBeenCalled();
 
     vi.advanceTimersByTime(8 * 60 * 1000);
@@ -110,9 +110,9 @@ describe('handleVoiceStateUpdate', () => {
     const join  = makeState({ userId: USER, channelId: CAM_CHANNEL, selfVideo: false, streaming: false });
     const camOn = makeState({ userId: USER, channelId: CAM_CHANNEL, selfVideo: true,  streaming: false });
 
-    await handleVoiceStateUpdate(makeState({ userId: USER, channelId: null, selfVideo: false, streaming: false }), join, warn);
+    await handleVoiceStateUpdate(makeState({ userId: USER, channelId: null, selfVideo: false, streaming: false }), join, warn, vi.fn());
     vi.advanceTimersByTime(5 * 60 * 1000);
-    await handleVoiceStateUpdate(join, camOn, warn);
+    await handleVoiceStateUpdate(join, camOn, warn, vi.fn());
     vi.advanceTimersByTime(5 * 60 * 1000);
 
     expect(warn).not.toHaveBeenCalled();
@@ -123,7 +123,7 @@ describe('handleVoiceStateUpdate', () => {
     const old  = makeState({ userId: USER, channelId: null,          selfVideo: false, streaming: false });
     const next = makeState({ userId: USER, channelId: OTHER_CHANNEL, selfVideo: false, streaming: false });
 
-    await handleVoiceStateUpdate(old, next, warn);
+    await handleVoiceStateUpdate(old, next, warn, vi.fn());
     expect(hasPendingCamWarning(USER)).toBe(false);
   });
 });

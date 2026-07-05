@@ -2,6 +2,36 @@ import { prisma } from '@yap/db';
 
 export type TimeRange = 'all-time' | 'this-week' | 'this-month';
 
+export type Tier = {
+  name: string;
+  emoji: string;
+  minHours: number;
+  maxHours: number | null;
+};
+
+export const TIERS: Tier[] = [
+  { name: 'Legend',        emoji: '🔴', minHours: 200, maxHours: null },
+  { name: 'Voyager',       emoji: '🔴', minHours: 175, maxHours: 200  },
+  { name: 'Expedition',    emoji: '🔴', minHours: 140, maxHours: 175  },
+  { name: 'Pioneer',       emoji: '🔴', minHours: 100, maxHours: 140  },
+  { name: 'Cartographer',  emoji: '🟠', minHours: 75,  maxHours: 100  },
+  { name: 'Navigator',     emoji: '🟡', minHours: 50,  maxHours: 75   },
+  { name: 'Trailblazer',   emoji: '🟢', minHours: 30,  maxHours: 50   },
+  { name: 'Wayfarer',      emoji: '🟢', minHours: 16,  maxHours: 30   },
+  { name: 'Pathfinder',    emoji: '🔵', minHours: 8,   maxHours: 16   },
+  { name: 'Scout',         emoji: '🔵', minHours: 3,   maxHours: 8    },
+  { name: 'Wanderer',      emoji: '⚪', minHours: 0.5, maxHours: 3    },
+];
+
+export function getTier(hours: number): Tier {
+  return TIERS.find(t => hours >= t.minHours) ?? TIERS[TIERS.length - 1];
+}
+
+export function getNextTier(hours: number): Tier | null {
+  const idx = TIERS.findIndex(t => hours >= t.minHours);
+  return idx > 0 ? TIERS[idx - 1] : null;
+}
+
 function getStartDate(range: TimeRange): Date | undefined {
   if (range === 'all-time') return undefined;
   const now = new Date();
@@ -11,21 +41,17 @@ function getStartDate(range: TimeRange): Date | undefined {
   return new Date(now.getFullYear(), now.getMonth(), 1);
 }
 
-export async function getLeaderboard(guildId: string, range: TimeRange) {
+export async function getLeaderboard(range: TimeRange) {
   const since = getStartDate(range);
 
-  const rows = await prisma.focusParticipant.groupBy({
+  const rows = await prisma.vcSession.groupBy({
     by: ['userId'],
     where: {
-      session: {
-        guildId,
-        status: 'DONE',
-        ...(since ? { startedAt: { gte: since } } : {}),
-      },
+      leftAt: { not: null },
+      ...(since ? { joinedAt: { gte: since } } : {}),
     },
-    _sum:   { minutesFocused: true },
-    _count: { sessionId: true },
-    orderBy: { _sum: { minutesFocused: 'desc' } },
+    _sum: { durationSecs: true },
+    orderBy: { _sum: { durationSecs: 'desc' } },
     take: 10,
   });
 
@@ -34,25 +60,54 @@ export async function getLeaderboard(guildId: string, range: TimeRange) {
   const userMap = new Map(users.map(u => [u.id, u]));
 
   return rows.map(r => ({
-    userId:       r.userId,
-    username:     userMap.get(r.userId)?.username ?? 'Unknown',
-    totalMinutes: r._sum.minutesFocused ?? 0,
-    sessionCount: r._count.sessionId,
+    userId:      r.userId,
+    username:    userMap.get(r.userId)?.username ?? 'Unknown',
+    totalSecs:   r._sum.durationSecs ?? 0,
   }));
 }
 
-export async function getMyStats(guildId: string, userId: string) {
-  const rows = await prisma.focusParticipant.aggregate({
-    where: {
-      userId,
-      session: { guildId, status: 'DONE' },
-    },
-    _sum:   { minutesFocused: true },
-    _count: { sessionId: true },
-  });
+export async function getMyStats(userId: string) {
+  const now = new Date();
+  const weekStart  = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6);
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+  const [allTime, monthly, weekly] = await Promise.all([
+    prisma.vcSession.aggregate({ where: { userId, leftAt: { not: null } }, _sum: { durationSecs: true } }),
+    prisma.vcSession.aggregate({ where: { userId, leftAt: { not: null }, joinedAt: { gte: monthStart } }, _sum: { durationSecs: true } }),
+    prisma.vcSession.aggregate({ where: { userId, leftAt: { not: null }, joinedAt: { gte: weekStart  } }, _sum: { durationSecs: true } }),
+  ]);
+
+  const monthlySecs = monthly._sum.durationSecs ?? 0;
+  const weeklySecs  = weekly._sum.durationSecs  ?? 0;
+  const allTimeSecs = allTime._sum.durationSecs  ?? 0;
+
+  const [monthlyRank, weeklyRank, allTimeRank] = await Promise.all([
+    prisma.vcSession.groupBy({
+      by: ['userId'],
+      where: { leftAt: { not: null }, joinedAt: { gte: monthStart } },
+      _sum: { durationSecs: true },
+      having: { durationSecs: { _sum: { gt: monthlySecs } } },
+    }),
+    prisma.vcSession.groupBy({
+      by: ['userId'],
+      where: { leftAt: { not: null }, joinedAt: { gte: weekStart } },
+      _sum: { durationSecs: true },
+      having: { durationSecs: { _sum: { gt: weeklySecs } } },
+    }),
+    prisma.vcSession.groupBy({
+      by: ['userId'],
+      where: { leftAt: { not: null } },
+      _sum: { durationSecs: true },
+      having: { durationSecs: { _sum: { gt: allTimeSecs } } },
+    }),
+  ]);
 
   return {
-    totalMinutes: rows._sum.minutesFocused ?? 0,
-    sessionCount: rows._count.sessionId,
+    allTimeSecs,
+    monthlySecs,
+    weeklySecs,
+    monthlyRank:  monthlyRank.length + 1,
+    weeklyRank:   weeklyRank.length  + 1,
+    allTimeRank:  allTimeRank.length + 1,
   };
 }
