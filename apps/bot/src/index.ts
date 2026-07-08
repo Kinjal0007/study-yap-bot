@@ -12,6 +12,7 @@ import { handleVoiceStateUpdate, WARNING_CHANNEL_ID, AFK_CHANNEL_ID } from './ha
 import { loadTierRoles, updateMemberTierRole } from './focus/roles.js';
 import { handlePrefixCommand } from './handlers/prefix.js';
 import { startStatusUpdater } from './botStatus.js';
+import { registerAfkHandler } from './afk.js';
 import { prisma } from '@yap/db';
 
 const client = createClient();
@@ -73,6 +74,7 @@ client.on(Events.VoiceStateUpdate, async (oldState, newState) => {
 });
 
 client.on(Events.MessageCreate, (message) => handlePrefixCommand(message));
+registerAfkHandler(client);
 
 client.on(Events.InteractionCreate, async (interaction) => {
   if (interaction.isChatInputCommand()) {
