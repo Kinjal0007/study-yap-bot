@@ -5,6 +5,7 @@ import { formatTime } from '../commands/leaderboard.js';
 import { buildStatsEmbed } from '../commands/mystats.js';
 import { getLeaderboard as getFocusLeaderboard } from '../focus/focusStats.js';
 import { loadTierRoles, updateMemberTierRole } from '../focus/roles.js';
+import { setAfk } from '../afk.js';
 import { prisma } from '@yap/db';
 
 const PREFIX = '-';
@@ -28,7 +29,10 @@ export async function handlePrefixCommand(message: Message): Promise<void> {
 
   const { command, args } = parsed;
 
-  if (command === 'focus') {
+  if (command === 'afk') {
+    const reason = args.join(' ') || 'AFK';
+    await setAfk(message, reason);
+  } else if (command === 'focus') {
     await handleFocus(message);
   } else if (command === 'lb') {
     const sub = args[0]?.toLowerCase();
