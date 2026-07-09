@@ -43,26 +43,49 @@ function getStartDate(range: TimeRange): Date | undefined {
 
 export async function getLeaderboard(range: TimeRange) {
   const since = getStartDate(range);
+  const now = new Date();
 
-  const rows = await prisma.vcSession.groupBy({
-    by: ['userId'],
-    where: {
-      leftAt: { not: null },
-      ...(since ? { joinedAt: { gte: since } } : {}),
-    },
-    _sum: { durationSecs: true },
-    orderBy: { _sum: { durationSecs: 'desc' } },
-    take: 10,
-  });
+  const [closed, open] = await Promise.all([
+    prisma.vcSession.groupBy({
+      by: ['userId'],
+      where: {
+        leftAt: { not: null },
+        ...(since ? { joinedAt: { gte: since } } : {}),
+      },
+      _sum: { durationSecs: true },
+    }),
+    prisma.vcSession.findMany({
+      where: {
+        leftAt: null,
+        ...(since ? { joinedAt: { gte: since } } : {}),
+      },
+      select: { userId: true, joinedAt: true },
+    }),
+  ]);
 
-  const userIds = rows.map(r => r.userId);
+  // Map closed secs per user
+  const secsMap = new Map<string, number>();
+  for (const r of closed) secsMap.set(r.userId, r._sum.durationSecs ?? 0);
+
+  // Add live elapsed time for open sessions
+  for (const r of open) {
+    const elapsed = Math.floor((now.getTime() - r.joinedAt.getTime()) / 1000);
+    secsMap.set(r.userId, (secsMap.get(r.userId) ?? 0) + elapsed);
+  }
+
+  // Sort and take top 10
+  const sorted = [...secsMap.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 10);
+
+  const userIds = sorted.map(([id]) => id);
   const users = await prisma.user.findMany({ where: { id: { in: userIds } } });
   const userMap = new Map(users.map(u => [u.id, u]));
 
-  return rows.map(r => ({
-    userId:      r.userId,
-    username:    userMap.get(r.userId)?.username ?? 'Unknown',
-    totalSecs:   r._sum.durationSecs ?? 0,
+  return sorted.map(([userId, totalSecs]) => ({
+    userId,
+    username:  userMap.get(userId)?.username ?? 'Unknown',
+    totalSecs,
   }));
 }
 
@@ -71,15 +94,19 @@ export async function getMyStats(userId: string) {
   const weekStart  = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6);
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
-  const [allTime, monthly, weekly] = await Promise.all([
+  const [allTime, monthly, weekly, openSessions] = await Promise.all([
     prisma.vcSession.aggregate({ where: { userId, leftAt: { not: null } }, _sum: { durationSecs: true } }),
     prisma.vcSession.aggregate({ where: { userId, leftAt: { not: null }, joinedAt: { gte: monthStart } }, _sum: { durationSecs: true } }),
     prisma.vcSession.aggregate({ where: { userId, leftAt: { not: null }, joinedAt: { gte: weekStart  } }, _sum: { durationSecs: true } }),
+    prisma.vcSession.findMany({ where: { userId, leftAt: null }, select: { joinedAt: true } }),
   ]);
 
-  const monthlySecs = monthly._sum.durationSecs ?? 0;
-  const weeklySecs  = weekly._sum.durationSecs  ?? 0;
-  const allTimeSecs = allTime._sum.durationSecs  ?? 0;
+  const liveElapsed = openSessions.reduce((sum, s) =>
+    sum + Math.floor((now.getTime() - s.joinedAt.getTime()) / 1000), 0);
+
+  const monthlySecs = (monthly._sum.durationSecs ?? 0) + liveElapsed;
+  const weeklySecs  = (weekly._sum.durationSecs  ?? 0) + liveElapsed;
+  const allTimeSecs = (allTime._sum.durationSecs  ?? 0) + liveElapsed;
 
   const [monthlyRank, weeklyRank, allTimeRank] = await Promise.all([
     prisma.vcSession.groupBy({
