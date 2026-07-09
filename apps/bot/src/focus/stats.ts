@@ -67,9 +67,10 @@ export async function getLeaderboard(range: TimeRange) {
   const secsMap = new Map<string, number>();
   for (const r of closed) secsMap.set(r.userId, r._sum.durationSecs ?? 0);
 
-  // Add live elapsed time for open sessions
+  // Add live elapsed time for open sessions, capped at 12h to ignore stale/unclosed sessions
+  const MAX_LIVE_SECS = 12 * 3600;
   for (const r of open) {
-    const elapsed = Math.floor((now.getTime() - r.joinedAt.getTime()) / 1000);
+    const elapsed = Math.min(Math.floor((now.getTime() - r.joinedAt.getTime()) / 1000), MAX_LIVE_SECS);
     secsMap.set(r.userId, (secsMap.get(r.userId) ?? 0) + elapsed);
   }
 
@@ -101,8 +102,9 @@ export async function getMyStats(userId: string) {
     prisma.vcSession.findMany({ where: { userId, leftAt: null }, select: { joinedAt: true } }),
   ]);
 
+  const MAX_LIVE_SECS = 12 * 3600;
   const liveElapsed = openSessions.reduce((sum, s) =>
-    sum + Math.floor((now.getTime() - s.joinedAt.getTime()) / 1000), 0);
+    sum + Math.min(Math.floor((now.getTime() - s.joinedAt.getTime()) / 1000), MAX_LIVE_SECS), 0);
 
   const monthlySecs = (monthly._sum.durationSecs ?? 0) + liveElapsed;
   const weeklySecs  = (weekly._sum.durationSecs  ?? 0) + liveElapsed;
