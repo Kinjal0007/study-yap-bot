@@ -29,6 +29,25 @@ async function restoreSessionNicknames(client: Client, sessionId: string): Promi
   }
 }
 
+async function closeStaleVcSessions(): Promise<void> {
+  const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const stale = await prisma.vcSession.findMany({
+    where: { leftAt: null, joinedAt: { lt: cutoff } },
+    select: { id: true, joinedAt: true },
+  });
+  if (stale.length === 0) return;
+
+  for (const s of stale) {
+    const leftAt = new Date(s.joinedAt.getTime() + 12 * 60 * 60 * 1000); // cap at 12h
+    const durationSecs = 12 * 3600;
+    await prisma.vcSession.update({
+      where: { id: s.id },
+      data: { leftAt, durationSecs },
+    });
+  }
+  console.log(`Closed ${stale.length} stale VC session(s) older than 24h`);
+}
+
 async function cleanupStalePickerMessages(client: Client): Promise<void> {
   const guild = client.guilds.cache.first();
   if (!guild) return;
@@ -95,6 +114,7 @@ async function cleanupStaleDoneMessages(client: Client): Promise<void> {
 }
 
 export async function reconcileActiveSessions(client: Client): Promise<void> {
+  await closeStaleVcSessions();
   await cleanupStaleDoneMessages(client);
   await cleanupStalePickerMessages(client);
 
