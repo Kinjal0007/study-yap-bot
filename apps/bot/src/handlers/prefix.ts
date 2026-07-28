@@ -29,7 +29,7 @@ export async function handlePrefixCommand(message: Message): Promise<void> {
 
   const { command, args } = parsed;
 
-  if (command === 'afk') {
+  if (command === 'dnd') {
     const reason = args.join(' ') || 'DND';
     await setAfk(message, reason);
   } else if (command === 'focus') {

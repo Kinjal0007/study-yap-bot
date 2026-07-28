@@ -60,7 +60,7 @@ export function registerAfkHandler(client: Client): void {
     if (!message.guildId) return;
 
     // If the message author is AFK, clear it (unless it's the -afk command itself)
-    if (isAfk(message.author.id) && !message.content.startsWith('-afk')) {
+    if (isAfk(message.author.id) && !message.content.startsWith('-dnd')) {
       await clearAfk(message);
     }
 
