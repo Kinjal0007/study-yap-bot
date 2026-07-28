@@ -17,12 +17,12 @@ export async function setAfk(message: Message, reason: string): Promise<void> {
   if (!member) return;
 
   const originalNickname = member.nickname;
-  const baseName = (originalNickname ?? member.user.username).replace(/^\[AFK\] /, '');
+  const baseName = (originalNickname ?? member.user.username).replace(/^\[DND\] /, '');
 
   afkMap.set(message.author.id, { reason, originalNickname: originalNickname ?? '' });
 
   await member.setNickname(buildAFKNickname(baseName)).catch(() => {});
-  await message.reply(`You're now AFK: *${reason}*`);
+  await message.reply(`You're now DND: *${reason}*`);
 }
 
 export async function clearAfk(message: Message): Promise<void> {
@@ -34,7 +34,7 @@ export async function clearAfk(message: Message): Promise<void> {
   if (message.member) {
     await restoreNickname(message.member, entry.originalNickname ?? null);
   }
-  await message.reply(`Welcome back! Your AFK has been cleared.`).catch(() => {});
+  await message.reply(`Welcome back! Your DND has been cleared.`).catch(() => {});
 }
 
 export async function handleAfkMentions(message: Message): Promise<void> {
@@ -45,7 +45,7 @@ export async function handleAfkMentions(message: Message): Promise<void> {
   for (const [userId, user] of mentioned) {
     const entry = afkMap.get(userId);
     if (entry) {
-      replies.push(`**${user.username}** is AFK: *${entry.reason}*`);
+      replies.push(`**${user.username}** is DND: *${entry.reason}*`);
     }
   }
 

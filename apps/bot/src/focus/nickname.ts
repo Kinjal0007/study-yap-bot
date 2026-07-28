@@ -1,7 +1,7 @@
 import type { GuildMember } from 'discord.js';
 import { prisma } from '@yap/db';
 
-const PREFIX   = '[AFK] ';
+const PREFIX   = '[DND] ';
 const MAX_LEN  = 32;
 const MAX_BASE = MAX_LEN - PREFIX.length; // 26
 
