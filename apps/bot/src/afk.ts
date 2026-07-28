@@ -17,7 +17,7 @@ export async function setAfk(message: Message, reason: string): Promise<void> {
   if (!member) return;
 
   const originalNickname = member.nickname;
-  const baseName = originalNickname ?? member.user.username;
+  const baseName = (originalNickname ?? member.user.username).replace(/^\[AFK\] /, '');
 
   afkMap.set(message.author.id, { reason, originalNickname: originalNickname ?? '' });
 

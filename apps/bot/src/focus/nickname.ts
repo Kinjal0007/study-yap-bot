@@ -6,7 +6,8 @@ const MAX_LEN  = 32;
 const MAX_BASE = MAX_LEN - PREFIX.length; // 26
 
 export function buildAFKNickname(baseName: string): string {
-  return PREFIX + baseName.slice(0, MAX_BASE);
+  const stripped = baseName.startsWith(PREFIX) ? baseName.slice(PREFIX.length) : baseName;
+  return PREFIX + stripped.slice(0, MAX_BASE);
 }
 
 export async function applyAFKNickname(
