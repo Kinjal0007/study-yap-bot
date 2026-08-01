@@ -180,12 +180,20 @@ async function handleUpdateRoles(message: Message): Promise<void> {
 
   const activeUserIds = new Set(rows.map(r => r.userId));
 
-  // Strip roles from all members who have no hours this month
-  const members = await message.guild.members.fetch();
+  // Fetch members who currently hold any tier role and strip inactive ones
+  const tierRoles = await message.guild.roles.fetch();
+  const tierNames = new Set(['Legend','Voyager','Expedition','Pioneer','Cartographer','Navigator','Trailblazer','Wayfarer','Pathfinder','Scout','Wanderer']);
+  const tierRoleList = [...tierRoles.values()].filter(r => tierNames.has(r.name.split(/[\s|]/)[0]));
+
+  const membersWithTier = new Set<string>();
+  for (const role of tierRoleList) {
+    for (const [id] of role.members) membersWithTier.add(id);
+  }
+
   let stripped = 0;
-  for (const [, member] of members) {
-    if (!member.user.bot && !activeUserIds.has(member.id)) {
-      await removeAllTierRoles(message.guild, member.id);
+  for (const userId of membersWithTier) {
+    if (!activeUserIds.has(userId)) {
+      await removeAllTierRoles(message.guild, userId);
       stripped++;
     }
   }
