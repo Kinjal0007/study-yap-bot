@@ -180,20 +180,12 @@ async function handleUpdateRoles(message: Message): Promise<void> {
 
   const activeUserIds = new Set(rows.map(r => r.userId));
 
-  // Fetch members who currently hold any tier role and strip inactive ones
-  const tierRoles = await message.guild.roles.fetch();
-  const tierNames = new Set(['Legend','Voyager','Expedition','Pioneer','Cartographer','Navigator','Trailblazer','Wayfarer','Pathfinder','Scout','Wanderer']);
-  const tierRoleList = [...tierRoles.values()].filter(r => tierNames.has(r.name.split(/[\s|]/)[0]));
-
-  const membersWithTier = new Set<string>();
-  for (const role of tierRoleList) {
-    for (const [id] of role.members) membersWithTier.add(id);
-  }
-
+  // Strip roles from all DB users who have no hours this month
+  const allUsers = await prisma.user.findMany({ select: { id: true } });
   let stripped = 0;
-  for (const userId of membersWithTier) {
-    if (!activeUserIds.has(userId)) {
-      await removeAllTierRoles(message.guild, userId);
+  for (const { id } of allUsers) {
+    if (!activeUserIds.has(id)) {
+      await removeAllTierRoles(message.guild, id);
       stripped++;
     }
   }
