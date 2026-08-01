@@ -4,7 +4,7 @@ import { getLeaderboard, getMyStats, getTier, type TimeRange } from '../focus/st
 import { formatTime } from '../commands/leaderboard.js';
 import { buildStatsEmbed } from '../commands/mystats.js';
 import { getLeaderboard as getFocusLeaderboard } from '../focus/focusStats.js';
-import { loadTierRoles, updateMemberTierRole } from '../focus/roles.js';
+import { loadTierRoles, updateMemberTierRole, removeAllTierRoles } from '../focus/roles.js';
 import { setAfk } from '../afk.js';
 import { prisma } from '@yap/db';
 
@@ -178,7 +178,19 @@ async function handleUpdateRoles(message: Message): Promise<void> {
     _sum: { durationSecs: true },
   });
 
-  const statusMsg = await message.reply(`Updating roles for ${rows.length} users...`);
+  const activeUserIds = new Set(rows.map(r => r.userId));
+
+  // Strip roles from all members who have no hours this month
+  const members = await message.guild.members.fetch();
+  let stripped = 0;
+  for (const [, member] of members) {
+    if (!member.user.bot && !activeUserIds.has(member.id)) {
+      await removeAllTierRoles(message.guild, member.id);
+      stripped++;
+    }
+  }
+
+  const statusMsg = await message.reply(`Stripped roles from ${stripped} inactive users. Updating ${rows.length} active users...`);
   let updated = 0;
 
   for (const row of rows) {
@@ -187,5 +199,5 @@ async function handleUpdateRoles(message: Message): Promise<void> {
     updated++;
   }
 
-  await statusMsg.edit(`Done! Updated roles for ${updated} users.`);
+  await statusMsg.edit(`Done! Stripped ${stripped} inactive, updated ${updated} active users.`);
 }

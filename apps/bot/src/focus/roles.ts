@@ -14,7 +14,22 @@ export async function loadTierRoles(guild: Guild): Promise<void> {
   console.log(`Loaded ${tierRoleIds.size} tier roles.`);
 }
 
+export async function removeAllTierRoles(guild: Guild, userId: string): Promise<void> {
+  const member = await guild.members.fetch(userId).catch(() => null);
+  if (!member) return;
+  const tierRoleIdSet = new Set(tierRoleIds.values());
+  const toRemove = member.roles.cache.filter(r => tierRoleIdSet.has(r.id));
+  for (const [, role] of toRemove) {
+    await member.roles.remove(role).catch(() => {});
+  }
+}
+
 export async function updateMemberTierRole(guild: Guild, userId: string, monthlyHours: number): Promise<void> {
+  if (monthlyHours < 0.5) {
+    await removeAllTierRoles(guild, userId);
+    return;
+  }
+
   const member = await guild.members.fetch(userId).catch(() => null);
   if (!member) return;
 
@@ -23,7 +38,6 @@ export async function updateMemberTierRole(guild: Guild, userId: string, monthly
   const targetRoleId = tierRoleIds.get(targetTier.name);
   if (!targetRoleId) return;
 
-  // Remove all other tier roles, add the correct one
   const tierRoleIdSet = new Set(tierRoleIds.values());
   const toRemove = member.roles.cache.filter(r => tierRoleIdSet.has(r.id) && r.id !== targetRoleId);
   for (const [, role] of toRemove) {
