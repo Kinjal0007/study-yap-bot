@@ -103,12 +103,17 @@ export async function getMyStats(userId: string) {
   ]);
 
   const MAX_LIVE_SECS = 12 * 3600;
-  const liveElapsed = openSessions.reduce((sum, s) =>
-    sum + Math.min(Math.floor((now.getTime() - s.joinedAt.getTime()) / 1000), MAX_LIVE_SECS), 0);
+  let liveAllTime = 0, liveMonthly = 0, liveWeekly = 0;
+  for (const s of openSessions) {
+    const elapsed = Math.min(Math.floor((now.getTime() - s.joinedAt.getTime()) / 1000), MAX_LIVE_SECS);
+    liveAllTime += elapsed;
+    if (s.joinedAt >= monthStart) liveMonthly += elapsed;
+    if (s.joinedAt >= weekStart)  liveWeekly  += elapsed;
+  }
 
-  const monthlySecs = (monthly._sum.durationSecs ?? 0) + liveElapsed;
-  const weeklySecs  = (weekly._sum.durationSecs  ?? 0) + liveElapsed;
-  const allTimeSecs = (allTime._sum.durationSecs  ?? 0) + liveElapsed;
+  const monthlySecs = (monthly._sum.durationSecs ?? 0) + liveMonthly;
+  const weeklySecs  = (weekly._sum.durationSecs  ?? 0) + liveWeekly;
+  const allTimeSecs = (allTime._sum.durationSecs  ?? 0) + liveAllTime;
 
   const [monthlyRank, weeklyRank, allTimeRank] = await Promise.all([
     prisma.vcSession.groupBy({
