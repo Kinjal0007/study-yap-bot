@@ -77,7 +77,7 @@ export function createClient(): Client {
 - [ ] **Step 2: Verify TypeScript compiles**
 
 ```bash
-cd /Users/kinjalkumar/Development/discord-bot-main/apps/bot && npx tsc --noEmit 2>&1 | head -10
+cd ~/Development/study-yap-bot/apps/bot && npx tsc --noEmit 2>&1 | head -10
 ```
 
 Expected: no output (clean).
@@ -85,7 +85,7 @@ Expected: no output (clean).
 - [ ] **Step 3: Commit**
 
 ```bash
-cd /Users/kinjalkumar/Development/discord-bot-main && git add apps/bot/src/client.ts && git commit -m "feat: add GuildVoiceStates intent for cam warning"
+cd ~/Development/study-yap-bot && git add apps/bot/src/client.ts && git commit -m "feat: add GuildVoiceStates intent for cam warning"
 ```
 
 ---
@@ -238,7 +238,7 @@ describe('handleVoiceStateUpdate', () => {
 - [ ] **Step 2: Run tests — verify they fail**
 
 ```bash
-cd /Users/kinjalkumar/Development/discord-bot-main/apps/bot && DATABASE_URL=postgresql://yap:yap@localhost:5432/yap pnpm test -- voiceState
+cd ~/Development/study-yap-bot/apps/bot && DATABASE_URL=postgresql://yap:yap@localhost:5432/yap pnpm test -- voiceState
 ```
 
 Expected: FAIL with "Cannot find module './voiceState.js'"
@@ -318,7 +318,7 @@ export async function handleVoiceStateUpdate(
 - [ ] **Step 4: Run tests — verify they pass**
 
 ```bash
-cd /Users/kinjalkumar/Development/discord-bot-main/apps/bot && DATABASE_URL=postgresql://yap:yap@localhost:5432/yap pnpm test -- voiceState
+cd ~/Development/study-yap-bot/apps/bot && DATABASE_URL=postgresql://yap:yap@localhost:5432/yap pnpm test -- voiceState
 ```
 
 Expected: All 8 tests PASS.
@@ -326,7 +326,7 @@ Expected: All 8 tests PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-cd /Users/kinjalkumar/Development/discord-bot-main && git add apps/bot/src/handlers/voiceState.ts apps/bot/src/handlers/voiceState.test.ts && git commit -m "feat: cam-on warning handler with 8-minute grace period"
+cd ~/Development/study-yap-bot && git add apps/bot/src/handlers/voiceState.ts apps/bot/src/handlers/voiceState.test.ts && git commit -m "feat: cam-on warning handler with 8-minute grace period"
 ```
 
 ---
@@ -427,7 +427,7 @@ client.login(env.DISCORD_TOKEN);
 - [ ] **Step 3: Verify TypeScript compiles**
 
 ```bash
-cd /Users/kinjalkumar/Development/discord-bot-main/apps/bot && npx tsc --noEmit 2>&1 | head -20
+cd ~/Development/study-yap-bot/apps/bot && npx tsc --noEmit 2>&1 | head -20
 ```
 
 Expected: no output (clean).
@@ -435,7 +435,7 @@ Expected: no output (clean).
 - [ ] **Step 4: Commit**
 
 ```bash
-cd /Users/kinjalkumar/Development/discord-bot-main && git add apps/bot/src/index.ts && git commit -m "feat: wire cam-on warning to voiceStateUpdate event"
+cd ~/Development/study-yap-bot && git add apps/bot/src/index.ts && git commit -m "feat: wire cam-on warning to voiceStateUpdate event"
 ```
 
 ---

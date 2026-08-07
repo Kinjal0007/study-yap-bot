@@ -96,7 +96,7 @@ client.on(Events.MessageCreate, (message) => handlePrefixCommand(message));
 - [ ] **Step 3: Verify TypeScript**
 
 ```bash
-cd /Users/kinjalkumar/Development/discord-bot-main/apps/bot && npx tsc --noEmit 2>&1 | head -10
+cd ~/Development/study-yap-bot/apps/bot && npx tsc --noEmit 2>&1 | head -10
 ```
 
 Expected: may error on missing `prefix.ts` module — that's fine, it will be created in Task 2.
@@ -104,7 +104,7 @@ Expected: may error on missing `prefix.ts` module — that's fine, it will be cr
 - [ ] **Step 4: Commit**
 
 ```bash
-cd /Users/kinjalkumar/Development/discord-bot-main && git add apps/bot/src/client.ts apps/bot/src/index.ts && git commit -m "feat: add MessageContent intent and wire messageCreate"
+cd ~/Development/study-yap-bot && git add apps/bot/src/client.ts apps/bot/src/index.ts && git commit -m "feat: add MessageContent intent and wire messageCreate"
 ```
 
 ---
@@ -157,7 +157,7 @@ describe('parsePrefix', () => {
 - [ ] **Step 2: Run tests — verify FAIL**
 
 ```bash
-cd /Users/kinjalkumar/Development/discord-bot-main/apps/bot && DATABASE_URL=postgresql://yap:yap@localhost:5432/yap pnpm test -- prefix 2>&1 | tail -10
+cd ~/Development/study-yap-bot/apps/bot && DATABASE_URL=postgresql://yap:yap@localhost:5432/yap pnpm test -- prefix 2>&1 | tail -10
 ```
 
 Expected: FAIL with "Cannot find module './prefix.js'"
@@ -273,7 +273,7 @@ async function handleMystats(message: Message): Promise<void> {
 - [ ] **Step 4: Run tests — verify PASS**
 
 ```bash
-cd /Users/kinjalkumar/Development/discord-bot-main/apps/bot && DATABASE_URL=postgresql://yap:yap@localhost:5432/yap pnpm test -- prefix 2>&1 | tail -10
+cd ~/Development/study-yap-bot/apps/bot && DATABASE_URL=postgresql://yap:yap@localhost:5432/yap pnpm test -- prefix 2>&1 | tail -10
 ```
 
 Expected: 7 tests PASS.
@@ -281,7 +281,7 @@ Expected: 7 tests PASS.
 - [ ] **Step 5: Verify full TypeScript**
 
 ```bash
-cd /Users/kinjalkumar/Development/discord-bot-main/apps/bot && npx tsc --noEmit 2>&1 | head -10
+cd ~/Development/study-yap-bot/apps/bot && npx tsc --noEmit 2>&1 | head -10
 ```
 
 Expected: no output.
@@ -289,7 +289,7 @@ Expected: no output.
 - [ ] **Step 6: Commit**
 
 ```bash
-cd /Users/kinjalkumar/Development/discord-bot-main && git add apps/bot/src/handlers/prefix.ts apps/bot/src/handlers/prefix.test.ts && git commit -m "feat: prefix command handler with duration picker"
+cd ~/Development/study-yap-bot && git add apps/bot/src/handlers/prefix.ts apps/bot/src/handlers/prefix.test.ts && git commit -m "feat: prefix command handler with duration picker"
 ```
 
 ---
@@ -372,7 +372,7 @@ import { startSession, endSession, cancelSession, getActiveSessionForChannel, se
 - [ ] **Step 3: Verify TypeScript**
 
 ```bash
-cd /Users/kinjalkumar/Development/discord-bot-main/apps/bot && npx tsc --noEmit 2>&1 | head -10
+cd ~/Development/study-yap-bot/apps/bot && npx tsc --noEmit 2>&1 | head -10
 ```
 
 Expected: no output.
@@ -380,7 +380,7 @@ Expected: no output.
 - [ ] **Step 4: Run full test suite**
 
 ```bash
-cd /Users/kinjalkumar/Development/discord-bot-main/apps/bot && DATABASE_URL=postgresql://yap:yap@localhost:5432/yap pnpm test 2>&1 | tail -15
+cd ~/Development/study-yap-bot/apps/bot && DATABASE_URL=postgresql://yap:yap@localhost:5432/yap pnpm test 2>&1 | tail -15
 ```
 
 Expected: all tests pass.
@@ -388,7 +388,7 @@ Expected: all tests pass.
 - [ ] **Step 5: Commit**
 
 ```bash
-cd /Users/kinjalkumar/Development/discord-bot-main && git add apps/bot/src/handlers/interactions.ts && git commit -m "feat: handle focus_create action from prefix duration picker"
+cd ~/Development/study-yap-bot && git add apps/bot/src/handlers/interactions.ts && git commit -m "feat: handle focus_create action from prefix duration picker"
 ```
 
 ---

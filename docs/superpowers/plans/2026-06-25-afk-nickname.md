@@ -75,7 +75,7 @@ model FocusParticipant {
 - [ ] **Step 2: Run migration**
 
 ```bash
-cd /Users/kinjalkumar/Development/discord-bot-main && DATABASE_URL=postgresql://yap:yap@localhost:5432/yap pnpm --filter @yap/db db:migrate
+cd ~/Development/study-yap-bot && DATABASE_URL=postgresql://yap:yap@localhost:5432/yap pnpm --filter @yap/db db:migrate
 ```
 
 When prompted for a migration name, enter: `add_original_nickname`
@@ -91,7 +91,7 @@ Generated Prisma Client
 - [ ] **Step 3: Verify TypeScript compiles**
 
 ```bash
-cd /Users/kinjalkumar/Development/discord-bot-main/apps/bot && npx tsc --noEmit 2>&1 | head -10
+cd ~/Development/study-yap-bot/apps/bot && npx tsc --noEmit 2>&1 | head -10
 ```
 
 Expected: no output.
@@ -99,7 +99,7 @@ Expected: no output.
 - [ ] **Step 4: Commit**
 
 ```bash
-cd /Users/kinjalkumar/Development/discord-bot-main && git add packages/db/prisma/ packages/db/src/ && git commit -m "feat: add originalNickname field to FocusParticipant"
+cd ~/Development/study-yap-bot && git add packages/db/prisma/ packages/db/src/ && git commit -m "feat: add originalNickname field to FocusParticipant"
 ```
 
 ---
@@ -149,7 +149,7 @@ describe('buildAFKNickname', () => {
 - [ ] **Step 2: Run — verify FAIL**
 
 ```bash
-cd /Users/kinjalkumar/Development/discord-bot-main/apps/bot && DATABASE_URL=postgresql://yap:yap@localhost:5432/yap pnpm test -- nickname 2>&1 | tail -10
+cd ~/Development/study-yap-bot/apps/bot && DATABASE_URL=postgresql://yap:yap@localhost:5432/yap pnpm test -- nickname 2>&1 | tail -10
 ```
 
 Expected: FAIL with "Cannot find module './nickname.js'"
@@ -200,7 +200,7 @@ export async function restoreNickname(
 - [ ] **Step 4: Run — verify PASS**
 
 ```bash
-cd /Users/kinjalkumar/Development/discord-bot-main/apps/bot && DATABASE_URL=postgresql://yap:yap@localhost:5432/yap pnpm test -- nickname 2>&1 | tail -10
+cd ~/Development/study-yap-bot/apps/bot && DATABASE_URL=postgresql://yap:yap@localhost:5432/yap pnpm test -- nickname 2>&1 | tail -10
 ```
 
 Expected: 5 tests PASS.
@@ -208,7 +208,7 @@ Expected: 5 tests PASS.
 - [ ] **Step 5: Verify TypeScript**
 
 ```bash
-cd /Users/kinjalkumar/Development/discord-bot-main/apps/bot && npx tsc --noEmit 2>&1 | head -10
+cd ~/Development/study-yap-bot/apps/bot && npx tsc --noEmit 2>&1 | head -10
 ```
 
 Expected: no output.
@@ -216,7 +216,7 @@ Expected: no output.
 - [ ] **Step 6: Commit**
 
 ```bash
-cd /Users/kinjalkumar/Development/discord-bot-main && git add apps/bot/src/focus/nickname.ts apps/bot/src/focus/nickname.test.ts && git commit -m "feat: AFK nickname builder with truncation logic"
+cd ~/Development/study-yap-bot && git add apps/bot/src/focus/nickname.ts apps/bot/src/focus/nickname.test.ts && git commit -m "feat: AFK nickname builder with truncation logic"
 ```
 
 ---
@@ -501,7 +501,7 @@ export async function handleButtonInteraction(interaction: ButtonInteraction, cl
 - [ ] **Step 6: Verify TypeScript**
 
 ```bash
-cd /Users/kinjalkumar/Development/discord-bot-main/apps/bot && npx tsc --noEmit 2>&1 | head -20
+cd ~/Development/study-yap-bot/apps/bot && npx tsc --noEmit 2>&1 | head -20
 ```
 
 Expected: no output.
@@ -509,7 +509,7 @@ Expected: no output.
 - [ ] **Step 7: Run full test suite**
 
 ```bash
-cd /Users/kinjalkumar/Development/discord-bot-main/apps/bot && DATABASE_URL=postgresql://yap:yap@localhost:5432/yap pnpm test 2>&1 | tail -15
+cd ~/Development/study-yap-bot/apps/bot && DATABASE_URL=postgresql://yap:yap@localhost:5432/yap pnpm test 2>&1 | tail -15
 ```
 
 Expected: all tests pass.
@@ -517,7 +517,7 @@ Expected: all tests pass.
 - [ ] **Step 8: Commit**
 
 ```bash
-cd /Users/kinjalkumar/Development/discord-bot-main && git add apps/bot/src/handlers/interactions.ts && git commit -m "feat: apply [AFK] nickname on focus start, restore on leave/end"
+cd ~/Development/study-yap-bot && git add apps/bot/src/handlers/interactions.ts && git commit -m "feat: apply [AFK] nickname on focus start, restore on leave/end"
 ```
 
 ---
