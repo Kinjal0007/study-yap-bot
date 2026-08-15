@@ -78,7 +78,7 @@ function scheduleCamWarning(userId: string, channelId: string, warn: WarnFn, mov
 }
 
 type StateShape = Pick<VoiceState, 'channelId' | 'selfVideo' | 'streaming'> & {
-  member: { id: string; user?: { username: string } } | null;
+  member: { id: string; user?: { username?: string; bot?: boolean } } | null;
 };
 
 export async function handleVoiceStateUpdate(
@@ -91,6 +91,12 @@ export async function handleVoiceStateUpdate(
   const userId   = newState.member?.id ?? oldState.member?.id;
   const username = newState.member?.user?.username ?? oldState.member?.user?.username;
   if (!userId) return;
+
+  // Bots are exempt from everything here. A music bot parked in a voice channel
+  // would otherwise be warned for having no camera and moved to AFK (killing
+  // playback), and would quietly accrue study hours toward tier roles.
+  const isBot = newState.member?.user?.bot ?? oldState.member?.user?.bot ?? false;
+  if (isBot) return;
 
   const inMonitored = newState.channelId !== null && CAM_REQUIRED_CHANNELS.has(newState.channelId);
   const exempt      = newState.selfVideo || newState.streaming;

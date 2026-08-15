@@ -12,9 +12,10 @@ function makeState(opts: {
   channelId: string | null;
   selfVideo: boolean;
   streaming: boolean;
+  bot?: boolean;
 }): any {
   return {
-    member: { id: opts.userId },
+    member: { id: opts.userId, user: { bot: opts.bot ?? false } },
     channelId: opts.channelId,
     selfVideo: opts.selfVideo,
     streaming: opts.streaming,
@@ -38,6 +39,20 @@ afterEach(() => {
 });
 
 describe('handleVoiceStateUpdate', () => {
+  it('ignores bots entirely — no cam warning for a music bot parked in a cam-required channel', async () => {
+    const warn = vi.fn();
+    const move = vi.fn();
+    const old  = makeState({ userId: 'lofi', channelId: null,        selfVideo: false, streaming: false, bot: true });
+    const next = makeState({ userId: 'lofi', channelId: CAM_CHANNEL, selfVideo: false, streaming: false, bot: true });
+
+    await handleVoiceStateUpdate(old, next, warn, move);
+    vi.advanceTimersByTime(60 * 60 * 1000);
+
+    expect(hasPendingCamWarning('lofi')).toBe(false);
+    expect(warn).not.toHaveBeenCalled();
+    expect(move).not.toHaveBeenCalled();
+  });
+
   it('schedules a warning when user joins cam-required channel without camera', async () => {
     const warn = vi.fn();
     const old = makeState({ userId: USER, channelId: null,        selfVideo: false, streaming: false });
