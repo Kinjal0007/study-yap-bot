@@ -8,7 +8,7 @@ import { handleFocusCommand } from './commands/focus.js';
 import { handleLeaderboardCommand } from './commands/leaderboard.js';
 import { handleMystatsCommand } from './commands/mystats.js';
 import { reconcileActiveSessions } from './recovery.js';
-import { handleVoiceStateUpdate, WARNING_CHANNEL_ID, AFK_CHANNEL_ID } from './handlers/voiceState.js';
+import { handleVoiceStateUpdate, loadVoiceChannels, WARNING_CHANNEL_ID, AFK_CHANNEL_ID } from './handlers/voiceState.js';
 import { loadTierRoles, updateMemberTierRole } from './focus/roles.js';
 import { handlePrefixCommand } from './handlers/prefix.js';
 import { startStatusUpdater } from './botStatus.js';
@@ -22,7 +22,10 @@ client.once(Events.ClientReady, async (c) => {
   await registerCommands();
   await reconcileActiveSessions(c);
   const guild = c.guilds.cache.first();
-  if (guild) await loadTierRoles(guild);
+  if (guild) {
+    await loadTierRoles(guild);
+    await loadVoiceChannels(guild);
+  }
   startStatusUpdater(c);
 });
 
@@ -61,6 +64,7 @@ client.on(Events.VoiceStateUpdate, async (oldState, newState) => {
     newState,
     async (userId) => {
       try {
+        if (!WARNING_CHANNEL_ID) { console.warn('cam warning skipped: #cam-on-warnings not resolved'); return; }
         const ch = await client.channels.fetch(WARNING_CHANNEL_ID).catch(() => null);
         if (ch instanceof TextChannel) {
           await ch.send(
@@ -74,6 +78,7 @@ client.on(Events.VoiceStateUpdate, async (oldState, newState) => {
     async (userId) => {
       try {
         if (!guild) return;
+        if (!AFK_CHANNEL_ID) { console.warn('AFK move skipped: no AFK voice channel resolved'); return; }
         const member = await guild.members.fetch(userId).catch(() => null);
         if (!member?.voice.channelId) return;
         await member.voice.setChannel(AFK_CHANNEL_ID);

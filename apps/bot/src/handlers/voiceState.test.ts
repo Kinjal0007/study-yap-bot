@@ -3,6 +3,8 @@ import {
   handleVoiceStateUpdate,
   cancelCamWarning,
   hasPendingCamWarning,
+  CAM_REQUIRED_CHANNELS,
+  STUDY_CHANNELS,
 } from './voiceState.js';
 
 function makeState(opts: {
@@ -25,6 +27,9 @@ const USER = 'user-123';
 
 beforeEach(() => {
   vi.useFakeTimers();
+  // Channel sets are populated at runtime by loadVoiceChannels(); seed them here.
+  CAM_REQUIRED_CHANNELS.add(CAM_CHANNEL);
+  STUDY_CHANNELS.add(CAM_CHANNEL);
 });
 
 afterEach(() => {

@@ -1,21 +1,48 @@
-import type { Guild, VoiceState } from 'discord.js';
+import { ChannelType, type Guild, type VoiceState } from 'discord.js';
 import { prisma } from '@yap/db';
 import { updateMemberTierRole } from '../focus/roles.js';
 
-export const STUDY_CHANNELS = new Set([
-  '1506430267735277598',
-  '1506364304486830163',
-  '1507012629246378087',
-  '1510718409804087579',
-]);
+// Resolved by NAME at startup rather than hardcoded, so moving the bot to another
+// server doesn't silently stop time tracking and cam enforcement. Empty until
+// loadVoiceChannels() runs on ClientReady.
+export const STUDY_CHANNELS = new Set<string>();
+export const CAM_REQUIRED_CHANNELS = new Set<string>();
 
-const CAM_REQUIRED_CHANNELS = new Set([
-  '1506364304486830163',
-  '1506430267735277598',
-]);
+export let WARNING_CHANNEL_ID = '';
+export let AFK_CHANNEL_ID     = '';
 
-export const WARNING_CHANNEL_ID = '1519444487259164926';
-export const AFK_CHANNEL_ID     = '1506932478265397329';
+const STUDY_NAME = /^cohort-\d+$/i;
+const CAM_NAME   = /^cam-only-\d+$/i;
+
+export async function loadVoiceChannels(guild: Guild): Promise<void> {
+  const channels = await guild.channels.fetch();
+  STUDY_CHANNELS.clear();
+  CAM_REQUIRED_CHANNELS.clear();
+  WARNING_CHANNEL_ID = '';
+  AFK_CHANNEL_ID = '';
+
+  for (const [, ch] of channels) {
+    if (!ch) continue;
+    const name = ch.name.toLowerCase();
+
+    if (ch.type === ChannelType.GuildVoice) {
+      // Cam-only rooms count as study time AND require a camera.
+      if (CAM_NAME.test(name)) { STUDY_CHANNELS.add(ch.id); CAM_REQUIRED_CHANNELS.add(ch.id); }
+      else if (STUDY_NAME.test(name)) STUDY_CHANNELS.add(ch.id);
+      else if (name === 'afk') AFK_CHANNEL_ID = ch.id;
+    } else if (ch.type === ChannelType.GuildText && name === 'cam-on-warnings') {
+      WARNING_CHANNEL_ID = ch.id;
+    }
+  }
+
+  console.log(
+    `Loaded ${STUDY_CHANNELS.size} study channel(s), ${CAM_REQUIRED_CHANNELS.size} cam-required, ` +
+    `warnings=${WARNING_CHANNEL_ID || 'MISSING'}, afk=${AFK_CHANNEL_ID || 'MISSING'}`,
+  );
+  if (!STUDY_CHANNELS.size) console.warn('WARNING: no study channels matched — no VC time will be tracked.');
+  if (!WARNING_CHANNEL_ID) console.warn('WARNING: #cam-on-warnings not found — cam warnings cannot be sent.');
+  if (!AFK_CHANNEL_ID) console.warn('WARNING: no AFK voice channel found — cam offenders cannot be moved.');
+}
 export const GRACE_PERIOD_MS    = 8 * 60 * 1000;
 export const MOVE_DELAY_MS      = 4 * 60 * 1000;
 
