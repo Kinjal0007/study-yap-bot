@@ -4,3 +4,14 @@ node_modules
 .env
 .env.*
 docs
+
+# One-off operational scripts — never needed at runtime, and scripts/repost-old-bot.mjs
+# contains a hardcoded bot token that must not be baked into a published image.
+scripts
+apps/bot/scripts
+
+# Local server/role snapshots
+backups
+
+.git
+.github

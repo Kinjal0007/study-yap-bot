@@ -29,7 +29,19 @@ client.once(Events.ClientReady, async (c) => {
 client.on(Events.GuildCreate, onGuildCreate);
 client.on(Events.GuildDelete, onGuildDelete);
 
+// Requires the GuildMembers privileged intent — both in client.ts and enabled in the
+// Discord developer portal. Without it this event never fires at all.
+const MEMBER_ROLE_ID = '1538180699062935664';
+
 client.on(Events.GuildMemberAdd, async (member) => {
+  // Kept separate from the tier lookup below: a DB failure must not stop
+  // every new joiner from getting the base Member role.
+  try {
+    await member.roles.add(MEMBER_ROLE_ID, 'Auto-assigned on join');
+  } catch (err) {
+    console.error(`Failed to assign Member role to ${member.id}:`, err);
+  }
+
   try {
     const { _sum } = await prisma.vcSession.aggregate({
       where: { userId: member.id, leftAt: { not: null } },
@@ -38,7 +50,7 @@ client.on(Events.GuildMemberAdd, async (member) => {
     const hours = (_sum.durationSecs ?? 0) / 3600;
     if (hours > 0) await updateMemberTierRole(member.guild, member.id, hours);
   } catch (err) {
-    console.error('Failed to assign role on member join:', err);
+    console.error('Failed to assign tier role on member join:', err);
   }
 });
 

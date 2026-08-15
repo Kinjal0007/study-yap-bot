@@ -1,3 +1,10 @@
 node_modules/
 .env
 dist/
+
+# One-off operational scripts kept locally. /scripts/repost-old-bot.mjs contains a
+# hardcoded bot token and must never be committed.
+/scripts/
+
+# Local Discord server/role snapshots
+/backups/
